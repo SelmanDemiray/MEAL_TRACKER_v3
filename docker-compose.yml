@@ -1,121 +1,161 @@
+version: '3.8'
+
 services:
-  # Databases
+  # Database
   postgres:
     image: postgres:15-alpine
+    container_name: mealprep-postgres
     environment:
       POSTGRES_DB: mealprep
       POSTGRES_USER: mealprep
       POSTGRES_PASSWORD: mealprep_secure_2024
+    ports:
+      - "35432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
-    ports:
-      - "35432:5432"
+    networks:
+      - mealprep-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mealprep"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U mealprep -d mealprep"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # Redis Cache
   redis:
     image: redis:7-alpine
+    container_name: mealprep-redis
     ports:
       - "36379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - mealprep-network
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Core Services
+  # API Gateway
   api-gateway:
     build:
       context: ./services/api-gateway
       dockerfile: Dockerfile
+    container_name: mealprep-api-gateway
     ports:
       - "38080:8080"
     environment:
-      - RUST_LOG=debug
-      - DATABASE_URL=postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
-      - REDIS_URL=redis://redis:6379
+      DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      RUST_LOG: info
+      CORS_ORIGINS: http://localhost:39000,http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
+    networks:
+      - mealprep-network
     restart: unless-stopped
 
+  # Nutrition Service
   nutrition-service:
     build:
       context: ./services/nutrition-service
       dockerfile: Dockerfile
+    container_name: mealprep-nutrition-service
+    ports:
+      - "38081:8081"
     environment:
-      - RUST_LOG=debug
-      - DATABASE_URL=postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
-      - REDIS_URL=redis://redis:6379
-      - AI_MODEL_PATH=/app/models
+      DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: info
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
+    networks:
+      - mealprep-network
     restart: unless-stopped
 
+  # Analytics Service
   analytics-service:
     build:
       context: ./services/analytics-service
       dockerfile: Dockerfile
+    container_name: mealprep-analytics-service
+    ports:
+      - "38082:8082"
     environment:
-      - RUST_LOG=debug
-      - DATABASE_URL=postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
-      - REDIS_URL=redis://redis:6379
+      DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: info
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
+    networks:
+      - mealprep-network
     restart: unless-stopped
 
   # Frontend
-  web-app:
+  frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: mealprep-frontend
     ports:
       - "39000:3000"
     environment:
-      - REACT_APP_API_URL=http://localhost:38080/api
-      - REACT_APP_WS_URL=ws://localhost:38080/ws
+      REACT_APP_API_BASE_URL: http://localhost:38080/api
+      REACT_APP_WS_URL: ws://localhost:38080/ws
     depends_on:
       - api-gateway
+    networks:
+      - mealprep-network
     restart: unless-stopped
 
-  # Monitoring
+  # Monitoring Stack
   prometheus:
     image: prom/prometheus:latest
-    container_name: meal_prep_3-prometheus-1
+    container_name: mealprep-prometheus
     ports:
-      - "9090:9090"
+      - "39090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
     networks:
-      - default
+      - mealprep-network
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
+    container_name: mealprep-grafana
     ports:
       - "39091:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana:/etc/grafana/provisioning
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+    networks:
+      - mealprep-network
     restart: unless-stopped
 
 volumes:
@@ -125,5 +165,5 @@ volumes:
   grafana_data:
 
 networks:
-  default:
+  mealprep-network:
     driver: bridge

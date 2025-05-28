@@ -1,17 +1,18 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-interface UiState {
+interface UIState {
   sidebarOpen: boolean;
   theme: 'light' | 'dark';
   notifications: Array<{
     id: string;
-    message: string;
     type: 'success' | 'error' | 'warning' | 'info';
+    message: string;
+    timestamp: number;
   }>;
 }
 
-const initialState: UiState = {
-  sidebarOpen: true,
+const initialState: UIState = {
+  sidebarOpen: false,
   theme: 'light',
   notifications: [],
 };
@@ -23,25 +24,24 @@ const uiSlice = createSlice({
     toggleSidebar: (state) => {
       state.sidebarOpen = !state.sidebarOpen;
     },
+    setSidebarOpen: (state, action: PayloadAction<boolean>) => {
+      state.sidebarOpen = action.payload;
+    },
     setTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
       state.theme = action.payload;
     },
-    addNotification: (state, action: PayloadAction<{
-      message: string;
-      type: 'success' | 'error' | 'warning' | 'info';
-    }>) => {
+    addNotification: (state, action: PayloadAction<Omit<UIState['notifications'][0], 'id' | 'timestamp'>>) => {
       state.notifications.push({
-        id: Date.now().toString(),
         ...action.payload,
+        id: Date.now().toString(),
+        timestamp: Date.now(),
       });
     },
     removeNotification: (state, action: PayloadAction<string>) => {
-      state.notifications = state.notifications.filter(
-        notification => notification.id !== action.payload
-      );
+      state.notifications = state.notifications.filter(n => n.id !== action.payload);
     },
   },
 });
 
-export const { toggleSidebar, setTheme, addNotification, removeNotification } = uiSlice.actions;
+export const { toggleSidebar, setSidebarOpen, setTheme, addNotification, removeNotification } = uiSlice.actions;
 export default uiSlice.reducer;
