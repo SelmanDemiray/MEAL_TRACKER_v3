@@ -55,3 +55,60 @@ docker network ls
 
 Write-Host "`nDocker disk usage:" -ForegroundColor Magenta
 docker system df
+
+# Meal Prep Pro - Docker Cleanup Script
+# This script helps clean up Docker containers, images, and volumes for development
+
+Write-Host "🧹 Meal Prep Pro - Docker Cleanup Script" -ForegroundColor Cyan
+Write-Host "=========================================" -ForegroundColor Cyan
+
+# Function to ask for user confirmation
+function Get-Confirmation {
+    param([string]$message)
+    $response = Read-Host "$message (y/N)"
+    return ($response -eq "y" -or $response -eq "Y" -or $response -eq "yes")
+}
+
+# Stop all running containers
+if (Get-Confirmation "Stop all Meal Prep containers?") {
+    Write-Host "Stopping containers..." -ForegroundColor Yellow
+    docker-compose down
+}
+
+# Remove containers
+if (Get-Confirmation "Remove all Meal Prep containers?") {
+    Write-Host "Removing containers..." -ForegroundColor Yellow
+    docker-compose rm -f
+}
+
+# Remove images
+if (Get-Confirmation "Remove Meal Prep images?") {
+    Write-Host "Removing images..." -ForegroundColor Yellow
+    docker images | Select-String "mealprep|meal-prep" | ForEach-Object {
+        $imageName = ($_ -split '\s+')[0] + ":" + ($_ -split '\s+')[1]
+        docker rmi $imageName -f
+    }
+}
+
+# Remove volumes (WARNING: This will delete all data!)
+if (Get-Confirmation "🚨 DANGER: Remove all volumes? This will DELETE ALL DATA!") {
+    Write-Host "Removing volumes..." -ForegroundColor Red
+    docker volume rm mealprep_postgres_data mealprep_redis_data mealprep_prometheus_data mealprep_grafana_data mealprep_ai_models 2>$null
+}
+
+# Clean up Docker system
+if (Get-Confirmation "Clean up Docker system (remove unused containers, networks, images)?") {
+    Write-Host "Cleaning up Docker system..." -ForegroundColor Yellow
+    docker system prune -f
+}
+
+# Optional: Clean up everything including volumes
+if (Get-Confirmation "🚨 NUCLEAR OPTION: Remove everything including all volumes?") {
+    Write-Host "Nuclear cleanup..." -ForegroundColor Red
+    docker system prune -a --volumes -f
+}
+
+Write-Host "✅ Cleanup completed!" -ForegroundColor Green
+Write-Host ""
+Write-Host "To rebuild and start fresh:" -ForegroundColor Cyan
+Write-Host "docker-compose up --build -d" -ForegroundColor White

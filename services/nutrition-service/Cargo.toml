@@ -23,3 +23,4 @@ reqwest = { version = "0.11", features = ["json"] }
 ndarray = "0.15"
 rayon = "1.7"
 polars = { version = "0.33", features = ["lazy", "temporal", "strings"] }
+fastrand = "2.0"

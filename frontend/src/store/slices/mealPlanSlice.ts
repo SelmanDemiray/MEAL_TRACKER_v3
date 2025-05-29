@@ -1,23 +1,25 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-interface MealPlan {
+interface Meal {
   id: string;
   name: string;
-  startDate: string;
-  endDate: string;
-  meals: Record<string, any>;
+  calories: number;
+  prepTime: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
 }
 
 interface MealPlanState {
-  currentPlan: MealPlan | null;
-  plans: MealPlan[];
+  currentWeek: number;
+  meals: { [key: string]: Meal };
   loading: boolean;
   error: string | null;
 }
 
 const initialState: MealPlanState = {
-  currentPlan: null,
-  plans: [],
+  currentWeek: 0,
+  meals: {},
   loading: false,
   error: null,
 };
@@ -26,11 +28,14 @@ const mealPlanSlice = createSlice({
   name: 'mealPlan',
   initialState,
   reducers: {
-    setCurrentPlan: (state, action: PayloadAction<MealPlan>) => {
-      state.currentPlan = action.payload;
+    setCurrentWeek: (state, action: PayloadAction<number>) => {
+      state.currentWeek = action.payload;
     },
-    setPlans: (state, action: PayloadAction<MealPlan[]>) => {
-      state.plans = action.payload;
+    addMeal: (state, action: PayloadAction<{ key: string; meal: Meal }>) => {
+      state.meals[action.payload.key] = action.payload.meal;
+    },
+    removeMeal: (state, action: PayloadAction<string>) => {
+      delete state.meals[action.payload];
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
@@ -41,5 +46,5 @@ const mealPlanSlice = createSlice({
   },
 });
 
-export const { setCurrentPlan, setPlans, setLoading, setError } = mealPlanSlice.actions;
+export const { setCurrentWeek, addMeal, removeMeal, setLoading, setError } = mealPlanSlice.actions;
 export default mealPlanSlice.reducer;

@@ -51,8 +51,10 @@ services:
       DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
       REDIS_URL: redis://redis:6379
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION: 3600
+      NUTRITION_SERVICE_URL: http://nutrition-service:8081
+      ANALYTICS_SERVICE_URL: http://analytics-service:8082
       RUST_LOG: info
-      CORS_ORIGINS: http://localhost:39000,http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,9 +62,13 @@ services:
         condition: service_healthy
     networks:
       - mealprep-network
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Nutrition Service
+  # Nutrition Service (AI-Powered)
   nutrition-service:
     build:
       context: ./services/nutrition-service
@@ -73,6 +79,9 @@ services:
     environment:
       DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
       REDIS_URL: redis://redis:6379
+      AI_MODEL_PATH: /app/models
+      ENABLE_GPU: false
+      MAX_BATCH_SIZE: 32
       RUST_LOG: info
     depends_on:
       postgres:
@@ -81,7 +90,13 @@ services:
         condition: service_healthy
     networks:
       - mealprep-network
-    restart: unless-stopped
+    volumes:
+      - ai_models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Analytics Service
   analytics-service:
@@ -102,9 +117,13 @@ services:
         condition: service_healthy
     networks:
       - mealprep-network
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Frontend
+  # Frontend (React)
   frontend:
     build:
       context: ./frontend
@@ -113,13 +132,17 @@ services:
     ports:
       - "39000:3000"
     environment:
-      REACT_APP_API_BASE_URL: http://localhost:38080/api
+      REACT_APP_API_URL: http://localhost:38080/api
       REACT_APP_WS_URL: ws://localhost:38080/ws
     depends_on:
       - api-gateway
     networks:
       - mealprep-network
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Monitoring Stack
   prometheus:
@@ -130,15 +153,15 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
+    networks:
+      - mealprep-network
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
-    networks:
-      - mealprep-network
-    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
@@ -146,24 +169,23 @@ services:
     ports:
       - "39091:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin123
-      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+      GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-    depends_on:
-      - prometheus
     networks:
       - mealprep-network
-    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+networks:
+  mealprep-network:
+    driver: bridge
 
 volumes:
   postgres_data:
   redis_data:
   prometheus_data:
   grafana_data:
-
-networks:
-  mealprep-network:
-    driver: bridge
+  ai_models:

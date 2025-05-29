@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 // Internal types for analysis
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct NutritionAnalysisInternal {
     pub basic_nutrition: crate::BasicNutrition,
     pub micronutrients: Vec<crate::Micronutrient>,
@@ -10,7 +10,7 @@ pub struct NutritionAnalysisInternal {
     pub environmental_impact: crate::EnvironmentalImpact,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DailyNutritionAnalysisInternal {
     pub total_nutrition: crate::BasicNutrition,
     pub meal_breakdown: Vec<crate::MealNutritionBreakdown>,
@@ -21,13 +21,13 @@ pub struct DailyNutritionAnalysisInternal {
 }
 
 // AI insights types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct HealthInsights {
     pub overall_score: f32,
     pub insights: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DailyInsights {
     pub recommendations: Vec<String>,
 }
@@ -88,22 +88,146 @@ pub struct GoalProgress {
 #[derive(Debug, Deserialize)]
 pub struct DeficiencyPredictionRequest {
     pub user_id: Uuid,
-    pub nutrition_history: Vec<crate::BasicNutrition>,
+    pub nutrition_history: Vec<DailyNutritionHistory>,
     pub health_indicators: Vec<String>,
+    pub time_period_days: i32,
 }
 
 #[derive(Debug, Serialize)]
 pub struct DeficiencyPrediction {
-    pub nutrient: String,
-    pub risk_level: String,
-    pub confidence: f32,
+    pub nutrient_name: String,
+    pub deficiency_risk: f32,
+    pub predicted_onset_days: Option<i32>,
+    pub severity: DeficiencySeverity,
     pub recommendations: Vec<String>,
+    pub confidence_level: f32,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeficiencySeverity {
+    Low,
+    Moderate,
+    High,
+    Critical,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DailyNutritionHistory {
+    pub date: chrono::DateTime<chrono::Utc>,
+    pub nutrition: crate::BasicNutrition,
+    pub symptoms: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MealOptimizationRequest {
+    pub user_id: Uuid,
+    pub current_meal: Vec<crate::MealIngredient>,
+    pub nutrition_goals: Option<crate::BasicNutrition>,
+    pub dietary_restrictions: Vec<String>,
+    pub optimization_priorities: Vec<OptimizationPriority>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OptimizationPriority {
+    Nutrition,
+    Cost,
+    Taste,
+    PrepTime,
+    Sustainability,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MealOptimizationResult {
+    pub original_nutrition: crate::BasicNutrition,
+    pub optimized_nutrition: crate::BasicNutrition,
+    pub ingredient_changes: Vec<IngredientChange>,
+    pub improvement_score: f32,
+    pub cost_impact: f32,
+    pub prep_time_impact: i32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct IngredientChange {
+    pub action: ChangeAction,
+    pub ingredient: String,
+    pub amount: Option<f32>,
+    pub unit: Option<String>,
+    pub reason: String,
+    pub nutrition_impact: crate::BasicNutrition,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ChangeAction {
+    Add,
+    Remove,
+    Increase,
+    Decrease,
+    Substitute,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TrendAnalysisRequest {
+    pub user_id: Uuid,
+    pub start_date: chrono::DateTime<chrono::Utc>,
+    pub end_date: chrono::DateTime<chrono::Utc>,
+    pub metrics: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TrendAnalysisResult {
+    pub trends: Vec<NutritionTrend>,
+    pub insights: Vec<TrendInsight>,
+    pub predictions: Vec<TrendPrediction>,
+    pub recommendations: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct NutritionTrend {
+    pub metric: String,
+    pub data_points: Vec<TrendDataPoint>,
+    pub trend_direction: TrendDirection,
+    pub correlation_strength: f32,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TrendDataPoint {
+    pub date: chrono::DateTime<chrono::Utc>,
+    pub value: f32,
+    pub goal_value: Option<f32>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TrendDirection {
+    Improving,
+    Declining,
+    Stable,
+    Volatile,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TrendInsight {
+    pub category: String,
+    pub insight: String,
+    pub confidence: f32,
+    pub action_required: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TrendPrediction {
+    pub metric: String,
+    pub predicted_value: f32,
+    pub prediction_date: chrono::DateTime<chrono::Utc>,
+    pub confidence_interval: (f32, f32),
 }
 
 // Re-export types from main.rs with proper derives
 pub use crate::{
     BasicNutrition, Micronutrient, DietaryCompliance, OptimizationSuggestion,
     EnvironmentalImpact, MealIngredient, LoggedMeal, MealNutritionBreakdown,
-    GoalAdherence, MealSuggestion, SleepNutritionImpact, NutritionTrends,
-    SeasonalAnalysis, MealRecommendationRequest, MealRecommendation
+    GoalAdherence, MealSuggestion, SleepNutritionImpact,
+    MealRecommendationRequest, MealRecommendation
 };

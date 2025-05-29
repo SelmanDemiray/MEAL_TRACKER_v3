@@ -28,7 +28,51 @@ impl RecommendationEngine {
         &self,
         _request: &MealRecommendationRequest,
     ) -> Result<Vec<MealRecommendation>> {
-        Ok(vec![])
+        // Mock implementation - return sample meal recommendations
+        Ok(vec![
+            MealRecommendation {
+                meal_id: Uuid::new_v4(),
+                name: "Grilled Chicken Salad".to_string(),
+                ingredients: vec![
+                    MealIngredient {
+                        ingredient_id: Uuid::new_v4(),
+                        name: "chicken breast".to_string(),
+                        amount: 150.0,
+                        unit: "g".to_string(),
+                        preparation: Some("grilled".to_string()),
+                    },
+                    MealIngredient {
+                        ingredient_id: Uuid::new_v4(),
+                        name: "spinach".to_string(),
+                        amount: 100.0,
+                        unit: "g".to_string(),
+                        preparation: None,
+                    },
+                ],
+                nutrition: crate::BasicNutrition {
+                    calories: 350.0,
+                    protein: 35.0,
+                    carbohydrates: 10.0,
+                    fat: 15.0,
+                    fiber: 5.0,
+                    sugar: 3.0,
+                    sodium: 200.0,
+                },
+                estimated_nutrition: crate::BasicNutrition {
+                    calories: 350.0,
+                    protein: 35.0,
+                    carbohydrates: 10.0,
+                    fat: 15.0,
+                    fiber: 5.0,
+                    sugar: 3.0,
+                    sodium: 200.0,
+                },
+                confidence_score: 0.95,
+                prep_time: 20,
+                difficulty: "Easy".to_string(),
+                cuisine_type: "Mediterranean".to_string(),
+            }
+        ])
     }
 
     pub async fn recommend_supplements(
@@ -66,5 +110,15 @@ impl RecommendationEngine {
         _request: &DeficiencyPredictionRequest,
     ) -> Result<Vec<DeficiencyPrediction>> {
         Ok(vec![])
+    }
+
+    pub async fn generate_meal_recommendations(&self, _user_preferences: &str) -> Result<Vec<String>> {
+        // Basic implementation
+        Ok(vec!["Grilled Chicken Salad".to_string(), "Quinoa Bowl".to_string()])
+    }
+
+    pub async fn generate_supplement_recommendations(&self, _nutrition_gaps: &str) -> Result<Vec<String>> {
+        // Basic implementation
+        Ok(vec!["Vitamin D3".to_string(), "Omega-3".to_string()])
     }
 }
