@@ -3,95 +3,78 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 interface Notification {
   id: string;
   type: 'success' | 'error' | 'warning' | 'info';
-  title: string;
   message: string;
-  duration?: number;
-  actions?: Array<{
-    label: string;
-    action: () => void;
-  }>;
+  timestamp: number;
 }
 
 interface UIState {
-  theme: 'light' | 'dark';
   sidebarOpen: boolean;
-  loading: boolean;
   notifications: Notification[];
-  modalOpen: boolean;
-  modalComponent: string | null;
-  modalProps: any;
+  loading: {
+    global: boolean;
+    [key: string]: boolean;
+  };
+  theme: 'light' | 'dark';
 }
 
 const initialState: UIState = {
-  theme: (localStorage.getItem('theme') as 'light' | 'dark') || 'light',
-  sidebarOpen: true,
-  loading: false,
+  sidebarOpen: false,
   notifications: [],
-  modalOpen: false,
-  modalComponent: null,
-  modalProps: null,
+  loading: {
+    global: false,
+  },
+  theme: 'light',
 };
 
-export const uiSlice = createSlice({
+const uiSlice = createSlice({
   name: 'ui',
   initialState,
   reducers: {
-    toggleTheme: (state) => {
-      state.theme = state.theme === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', state.theme);
-    },
-    setTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
-      state.theme = action.payload;
-      localStorage.setItem('theme', state.theme);
-    },
     toggleSidebar: (state) => {
       state.sidebarOpen = !state.sidebarOpen;
     },
     setSidebarOpen: (state, action: PayloadAction<boolean>) => {
       state.sidebarOpen = action.payload;
     },
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
-    },
-    addNotification: (state, action: PayloadAction<Omit<Notification, 'id'>>) => {
+    addNotification: (state, action: PayloadAction<Omit<Notification, 'id' | 'timestamp'>>) => {
       const notification: Notification = {
+        id: Date.now().toString(),
+        timestamp: Date.now(),
         ...action.payload,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       };
       state.notifications.push(notification);
     },
     removeNotification: (state, action: PayloadAction<string>) => {
-      state.notifications = state.notifications.filter(
-        (notification) => notification.id !== action.payload
-      );
+      state.notifications = state.notifications.filter(n => n.id !== action.payload);
     },
-    clearAllNotifications: (state) => {
+    clearNotifications: (state) => {
       state.notifications = [];
     },
-    openModal: (state, action: PayloadAction<{ component: string; props?: any }>) => {
-      state.modalOpen = true;
-      state.modalComponent = action.payload.component;
-      state.modalProps = action.payload.props || null;
+    setLoading: (state, action: PayloadAction<{ key: string; loading: boolean }>) => {
+      state.loading[action.payload.key] = action.payload.loading;
     },
-    closeModal: (state) => {
-      state.modalOpen = false;
-      state.modalComponent = null;
-      state.modalProps = null;
+    setGlobalLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading.global = action.payload;
+    },
+    toggleTheme: (state) => {
+      state.theme = state.theme === 'light' ? 'dark' : 'light';
+    },
+    setTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
+      state.theme = action.payload;
     },
   },
 });
 
 export const {
-  toggleTheme,
-  setTheme,
   toggleSidebar,
   setSidebarOpen,
-  setLoading,
   addNotification,
   removeNotification,
-  clearAllNotifications,
-  openModal,
-  closeModal,
+  clearNotifications,
+  setLoading,
+  setGlobalLoading,
+  toggleTheme,
+  setTheme,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

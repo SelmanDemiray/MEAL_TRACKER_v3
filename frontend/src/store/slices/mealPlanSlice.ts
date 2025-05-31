@@ -5,23 +5,44 @@ interface Meal {
   name: string;
   calories: number;
   prepTime: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
+  difficulty?: string;
+  cuisine?: string;
+}
+
+interface DayMeals {
+  Breakfast?: Meal;
+  Lunch?: Meal;
+  Dinner?: Meal;
+}
+
+interface MealPlan {
+  [day: string]: DayMeals;
 }
 
 interface MealPlanState {
   currentWeek: number;
-  meals: { [key: string]: Meal };
+  mealPlan: MealPlan;
   loading: boolean;
   error: string | null;
+  nutritionGoals: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
 }
 
 const initialState: MealPlanState = {
   currentWeek: 0,
-  meals: {},
+  mealPlan: {},
   loading: false,
   error: null,
+  nutritionGoals: {
+    calories: 2000,
+    protein: 150,
+    carbs: 250,
+    fat: 70,
+  },
 };
 
 const mealPlanSlice = createSlice({
@@ -31,11 +52,33 @@ const mealPlanSlice = createSlice({
     setCurrentWeek: (state, action: PayloadAction<number>) => {
       state.currentWeek = action.payload;
     },
-    addMeal: (state, action: PayloadAction<{ key: string; meal: Meal }>) => {
-      state.meals[action.payload.key] = action.payload.meal;
+    setMealPlan: (state, action: PayloadAction<MealPlan>) => {
+      state.mealPlan = action.payload;
     },
-    removeMeal: (state, action: PayloadAction<string>) => {
-      delete state.meals[action.payload];
+    addMeal: (state, action: PayloadAction<{ day: string; mealType: string; meal: Meal }>) => {
+      const { day, mealType, meal } = action.payload;
+      if (!state.mealPlan[day]) {
+        state.mealPlan[day] = {};
+      }
+      // Ensure the meal object has the expected structure
+      const mealData = {
+        name: meal.name || 'Unnamed Meal',
+        calories: meal.calories || 0,
+        prepTime: meal.prepTime || 0,
+        difficulty: meal.difficulty || 'Medium',
+        cuisine: meal.cuisine || 'Various',
+        ...meal
+      };
+      state.mealPlan[day][mealType as keyof DayMeals] = mealData;
+    },
+    removeMeal: (state, action: PayloadAction<{ day: string; mealType: string }>) => {
+      const { day, mealType } = action.payload;
+      if (state.mealPlan[day]) {
+        delete state.mealPlan[day][mealType as keyof DayMeals];
+      }
+    },
+    updateNutritionGoals: (state, action: PayloadAction<Partial<MealPlanState['nutritionGoals']>>) => {
+      state.nutritionGoals = { ...state.nutritionGoals, ...action.payload };
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
@@ -46,5 +89,14 @@ const mealPlanSlice = createSlice({
   },
 });
 
-export const { setCurrentWeek, addMeal, removeMeal, setLoading, setError } = mealPlanSlice.actions;
+export const {
+  setCurrentWeek,
+  setMealPlan,
+  addMeal,
+  removeMeal,
+  updateNutritionGoals,
+  setLoading,
+  setError,
+} = mealPlanSlice.actions;
+
 export default mealPlanSlice.reducer;

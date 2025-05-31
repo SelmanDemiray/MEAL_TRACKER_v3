@@ -1,3 +1,5 @@
+#!/usr/bin/env pwsh
+
 # Docker Cleanup Script for Meal_Prep_3 Project
 # This script performs a complete wipe of all Docker resources
 

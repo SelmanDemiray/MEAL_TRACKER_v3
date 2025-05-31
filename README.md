@@ -1,323 +1,277 @@
-# 🍽️ Meal Prep Pro - AI-Powered Meal Planning Platform
+# 🍽️ Meal Prep Pro - Smart Meal Planning & Nutrition Platform
 
-An advanced, AI-powered meal preparation and nutrition tracking platform built with modern web technologies.
+A comprehensive meal planning and nutrition tracking platform built with modern web technologies, featuring AI-powered recommendations, real-time analytics, and a beautiful user interface.
 
 ## 🌟 Features
 
-### 🤖 AI-Powered Intelligence
-- **Smart Meal Recommendations** - Personalized meal suggestions based on preferences, health goals, and dietary restrictions
-- **Nutritional Analysis** - Real-time nutritional breakdown with bioavailability calculations
-- **Deficiency Prediction** - Early warning system for potential nutrient deficiencies
-- **Recipe Optimization** - AI-driven recipe improvements for nutrition, taste, and cost
+### 🎯 Core Functionality
+- **Smart Meal Planning** - AI-powered weekly meal plans based on your preferences
+- **Nutrition Tracking** - Comprehensive macro and micronutrient monitoring
+- **Recipe Management** - Create, organize, and share your favorite recipes
+- **Shopping Lists** - Auto-generated grocery lists from meal plans
+- **Analytics Dashboard** - Real-time insights into your nutrition patterns
 
-### 📊 Comprehensive Nutrition Tracking
-- **Macro & Micronutrient Monitoring** - Track all essential nutrients with precision
-- **Goal Setting & Progress** - Personalized nutrition goals with achievement tracking
-- **Health Insights** - Predictive analytics for health trends and patterns
-- **Meal Timing Optimization** - Optimal meal timing for health and performance
+### 🤖 AI-Powered Features
+- **Personalized Recommendations** - ML-driven meal suggestions
+- **Nutrition Analysis** - Automated nutritional breakdown of recipes
+- **Goal Optimization** - Smart nutrition goal calculation and tracking
+- **Predictive Insights** - Forecast nutrition trends and achievements
 
-### 🗓️ Advanced Meal Planning
-- **Weekly/Monthly Planning** - Flexible meal planning with drag-and-drop interface
-- **Smart Shopping Lists** - Automatically generated and optimized shopping lists
-- **Batch Cooking Optimization** - Efficient meal prep scheduling
-- **Cost Optimization** - Budget-friendly meal planning with cost tracking
-
-### 📱 Modern User Experience
-- **Responsive Design** - Seamless experience across all devices
-- **Real-time Updates** - Live synchronization with WebSocket connections
-- **Offline Support** - Progressive Web App with offline capabilities
-- **Voice Commands** - Hands-free interaction while cooking
+### 📱 User Experience
+- **Responsive Design** - Works perfectly on desktop, tablet, and mobile
+- **Real-time Updates** - WebSocket-powered live data synchronization
+- **Dark/Light Mode** - Customizable interface themes
+- **Progressive Web App** - Install and use offline capabilities
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│    Frontend     │    │   API Gateway   │    │  Microservices  │
-│   (React TS)    │◄──►│     (Rust)      │◄──►│     (Rust)      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │                        │
-┌─────────────────────────────────────────┐    ┌─────────────────┐
-│            Database Layer              │    │   Monitoring    │
-│         PostgreSQL + Redis             │    │ Prometheus +    │
-│                                       │    │    Grafana      │
-└─────────────────────────────────────────┘    └─────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (React)                        │
+│  Next.js • TypeScript • Material-UI • Redux Toolkit       │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ HTTP/WebSocket
+┌─────────────────────▼───────────────────────────────────────┐
+│                  API Gateway (Rust)                        │
+│     Axum • Authentication • Rate Limiting • Monitoring     │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+    ┌─────────────────┼─────────────────┐
+    │                 │                 │
+┌───▼────┐    ┌──────▼──────┐    ┌─────▼─────┐
+│Nutrition│    │ Analytics   │    │   Cache   │
+│Service  │    │  Service    │    │  (Redis)  │
+│(Rust)   │    │   (Rust)    │    │           │
+└─────────┘    └─────────────┘    └───────────┘
+    │                 │                 │
+    └─────────────────┼─────────────────┘
+                      │
+              ┌───────▼────────┐
+              │   PostgreSQL   │
+              │   Database     │
+              └────────────────┘
 ```
-
-### Technology Stack
-
-**Frontend**
-- React 18 with TypeScript
-- Material-UI (MUI) for components
-- Redux Toolkit for state management
-- React Query for data fetching
-- Framer Motion for animations
-
-**Backend**
-- Rust with Axum framework
-- PostgreSQL 15 for data storage
-- Redis 7 for caching and sessions
-- JSON Web Tokens for authentication
-
-**AI/ML**
-- Custom Rust-native ML implementations
-- ndarray for numerical computing
-- polars for data processing
-- Advanced nutrition algorithms
-
-**Infrastructure**
-- Docker & Docker Compose
-- Prometheus & Grafana monitoring
-- Nginx reverse proxy
-- GitHub Actions CI/CD
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Docker & Docker Compose
-- Git
 - Node.js 18+ (for local development)
-- Rust 1.82+ (for local development)
+- Rust 1.70+ (for local development)
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/yourusername/meal-prep-pro.git
-cd meal-prep-pro
-```
+### 🐳 Docker Setup (Recommended)
 
-### 2. Environment Setup
-```bash
-# Copy environment files
-cp .env.example .env
-cp frontend/.env.example frontend/.env
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/meal-prep-pro.git
+   cd meal-prep-pro
+   ```
 
-# Edit configuration as needed
-nano .env
-```
+2. **Start all services**
+   ```bash
+   docker-compose up -d --build
+   ```
 
-### 3. Start with Docker Compose
-```bash
-# Build and start all services
-docker-compose up --build -d
+3. **Access the application**
+   - Frontend: http://localhost:33000
+   - API Gateway: http://localhost:38080
+   - Grafana Dashboard: http://localhost:33001 (admin/admin123)
+   - Prometheus: http://localhost:39090
 
-# Check service status
-docker-compose ps
-```
+### 🛠️ Local Development
 
-### 4. Access the Application
-- **Frontend**: http://localhost:39000
-- **API Gateway**: http://localhost:38080
-- **Grafana Monitoring**: http://localhost:39091 (admin/admin)
-- **Prometheus**: http://localhost:39090
+1. **Database Setup**
+   ```bash
+   docker run --name mealprep-db \
+     -e POSTGRES_DB=mealprep \
+     -e POSTGRES_USER=mealprep \
+     -e POSTGRES_PASSWORD=mealprep_secure_2024 \
+     -p 35432:5432 \
+     -d postgres:15-alpine
+   ```
 
-### 5. Initial Setup
-```bash
-# Create admin user (optional)
-curl -X POST http://localhost:38080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin",
-    "email": "admin@example.com",
-    "password": "secure_password_123"
-  }'
-```
+2. **Backend Services**
+   ```bash
+   # API Gateway
+   cd services/api-gateway
+   cargo run
 
-## 🛠️ Development
+   # Nutrition Service
+   cd services/nutrition-service
+   cargo run
 
-### Local Development Setup
-```bash
-# 1. Start infrastructure services
-docker-compose up postgres redis -d
+   # Analytics Service
+   cd services/analytics-service
+   cargo run
+   ```
 
-# 2. Backend development
-cd services/api-gateway
-cargo run
+3. **Frontend**
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
 
-# In another terminal
-cd services/nutrition-service
-cargo run
+## 📊 Services Overview
 
-# 3. Frontend development
-cd frontend
-npm install
-npm start
-```
+### 🌐 API Gateway (Port 38080)
+- **Authentication & Authorization** - JWT-based security
+- **Request Routing** - Intelligent service discovery
+- **Rate Limiting** - Prevent API abuse
+- **Monitoring** - Prometheus metrics collection
+- **WebSocket Support** - Real-time communication
+
+### 🥗 Nutrition Service (Port 38081)
+- **Nutrition Analysis** - Comprehensive meal analysis
+- **AI Recommendations** - ML-powered meal suggestions
+- **Goal Tracking** - Progress monitoring and insights
+- **Trend Analysis** - Long-term nutrition patterns
+
+### 📈 Analytics Service (Port 38082)
+- **User Behavior Analytics** - Usage pattern analysis
+- **Performance Metrics** - System health monitoring
+- **Predictive Modeling** - Future trend predictions
+- **Real-time Dashboards** - Live data visualization
+
+## 🗄️ Database Schema
+
+### Core Tables
+- `users` - User accounts and authentication
+- `user_profiles` - Extended user information
+- `recipes` - Recipe definitions and metadata
+- `meal_plans` - Meal planning schedules
+- `nutrition_goals` - User nutrition targets
+- `daily_nutrition` - Daily intake tracking
+
+### Analytics Tables
+- `user_activities` - Behavior tracking
+- `api_requests` - Usage analytics
+- `performance_metrics` - System monitoring
+
+## 🔧 Configuration
 
 ### Environment Variables
+
+**API Gateway**
 ```bash
-# Database
-DATABASE_URL=postgresql://mealprep:mealprep_secure_2024@localhost:35432/mealprep
-REDIS_URL=redis://localhost:36379
+DATABASE_URL=postgresql://user:pass@host:port/db
+REDIS_URL=redis://host:port
+JWT_SECRET=your-secret-key
+RUST_LOG=info
+```
 
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRATION=3600
-
-# Service URLs
-NUTRITION_SERVICE_URL=http://localhost:8081
-ANALYTICS_SERVICE_URL=http://localhost:8082
-
-# Frontend
-REACT_APP_API_URL=http://localhost:38080/api
+**Frontend**
+```bash
+REACT_APP_API_URL=http://localhost:38080
 REACT_APP_WS_URL=ws://localhost:38080/ws
 ```
 
-### Running Tests
-```bash
-# Backend tests
-cd services/api-gateway
-cargo test
+### Docker Compose Override
+Create `docker-compose.override.yml` for local customizations:
 
-# Frontend tests
-cd frontend
-npm test
-
-# Integration tests
-./scripts/run-integration-tests.sh
+```yaml
+version: '3.8'
+services:
+  api-gateway:
+    environment:
+      - RUST_LOG=debug
+    ports:
+      - "38080:8080"
 ```
 
-## 📊 Monitoring & Analytics
+## 📈 Monitoring & Observability
 
-### Health Checks
-```bash
-# Check all services
-curl http://localhost:38080/health
-curl http://localhost:38081/health
-curl http://localhost:38082/health
-```
+### Prometheus Metrics
+- **HTTP Request Duration** - Response time tracking
+- **Database Connection Pool** - Connection health
+- **Memory Usage** - Resource consumption
+- **Custom Business Metrics** - Meals planned, recipes created
 
-### Metrics & Monitoring
-- **Grafana Dashboards**: Pre-configured dashboards for all services
-- **Prometheus Metrics**: Custom metrics for business logic
-- **Logging**: Structured logging with tracing
-- **Alerting**: Real-time alerts for critical issues
+### Grafana Dashboards
+- **System Health** - Infrastructure monitoring
+- **Application Performance** - Service-level metrics
+- **User Analytics** - Usage patterns and trends
+- **Business Intelligence** - Key performance indicators
 
-### Performance Metrics
-- API response times
-- Database query performance
-- AI model inference speed
-- User engagement analytics
-- System resource utilization
-
-## 🚢 Deployment
-
-### Production Deployment
-```bash
-# Build production images
-docker-compose -f docker-compose.prod.yml build
-
-# Deploy to production
-docker-compose -f docker-compose.prod.yml up -d
-
-# Run migrations
-docker-compose exec api-gateway sqlx migrate run
-```
-
-### Scaling Services
-```bash
-# Scale specific services
-docker-compose up --scale nutrition-service=3 -d
-docker-compose up --scale analytics-service=2 -d
-```
-
-### Backup & Recovery
-```bash
-# Database backup
-docker-compose exec postgres pg_dump -U mealprep mealprep > backup.sql
-
-# Restore from backup
-docker-compose exec -T postgres psql -U mealprep mealprep < backup.sql
-```
+### Logging
+- **Structured Logging** - JSON format with correlation IDs
+- **Log Levels** - Debug, Info, Warn, Error
+- **Centralized Collection** - ELK stack ready
 
 ## 🧪 Testing
 
-### Test Coverage
-- Unit tests for all business logic
-- Integration tests for API endpoints
-- End-to-end tests for critical user flows
-- Performance tests for AI models
-- Load tests for scalability
-
-### Running Tests
+### Backend Testing
 ```bash
-# All tests
-make test
+# Unit tests
+cargo test
 
-# Specific test suites
-make test-backend
-make test-frontend
-make test-integration
-make test-performance
+# Integration tests
+cargo test --test integration
+
+# Load testing
+cargo test --release --test load
 ```
 
-## 📚 API Documentation
-
-### Authentication
+### Frontend Testing
 ```bash
-# Register user
-POST /api/auth/register
-{
-  "username": "johndoe",
-  "email": "john@example.com",
-  "password": "secure_password"
-}
+# Unit tests
+npm test
 
-# Login
-POST /api/auth/login
-{
-  "email": "john@example.com",
-  "password": "secure_password"
-}
+# E2E tests
+npm run test:e2e
+
+# Component tests
+npm run test:component
 ```
 
-### Nutrition Analysis
-```bash
-# Analyze meal
-POST /api/nutrition/analyze/meal
-{
-  "ingredients": [
-    {"name": "chicken breast", "amount": 200, "unit": "g"},
-    {"name": "brown rice", "amount": 150, "unit": "g"}
-  ],
-  "portion_size": 1.0,
-  "cooking_method": "grilled"
-}
-```
+## 🚢 Deployment
 
-### Meal Planning
-```bash
-# Generate AI meal plan
-POST /api/meal-plans/generate
-{
-  "duration_days": 7,
-  "dietary_preferences": ["high_protein", "low_carb"],
-  "budget_max": 100.00,
-  "prep_time_max": 120
-}
+### Production Checklist
+- [ ] Environment variables configured
+- [ ] Database migrations applied
+- [ ] SSL certificates installed
+- [ ] Monitoring dashboards configured
+- [ ] Backup procedures tested
+- [ ] Security scan completed
+
+### CI/CD Pipeline
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Production
+on:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: |
+          cargo test
+          npm test
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production
+        run: |
+          docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ## 🤝 Contributing
 
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass (`make test`)
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to the branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
 
-### Code Standards
-- **Rust**: Follow rustfmt and clippy recommendations
-- **TypeScript**: Use ESLint and Prettier configurations
-- **Commits**: Follow conventional commit format
-- **Documentation**: Update docs for all changes
-
-### Review Process
-- All PRs require review from maintainers
-- Automated tests must pass
-- Code coverage must not decrease
-- Performance benchmarks must not regress
+### Development Guidelines
+- Follow Rust and TypeScript best practices
+- Write comprehensive tests
+- Update documentation
+- Follow semantic versioning
 
 ## 📄 License
 
@@ -325,45 +279,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-### Getting Help
-- **Documentation**: Check the `/docs` directory
-- **Issues**: Open an issue on GitHub
-- **Discussions**: Join our GitHub Discussions
+- **Documentation**: [docs.mealpreppro.com](https://docs.mealpreppro.com)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/meal-prep-pro/issues)
+- **Discord**: [Community Server](https://discord.gg/mealpreppro)
 - **Email**: support@mealpreppro.com
-
-### Common Issues
-- [Database Connection Issues](docs/troubleshooting/database.md)
-- [Authentication Problems](docs/troubleshooting/auth.md)
-- [Performance Optimization](docs/troubleshooting/performance.md)
-- [Docker Issues](docs/troubleshooting/docker.md)
-
-## 🗺️ Roadmap
-
-### Version 1.1 (Q2 2024)
-- [ ] Mobile app (React Native)
-- [ ] Advanced meal prep scheduling
-- [ ] Social features (meal sharing)
-- [ ] Integration with fitness trackers
-
-### Version 1.2 (Q3 2024)
-- [ ] Grocery store integrations
-- [ ] Recipe video generation
-- [ ] Advanced dietary analysis
-- [ ] Multi-language support
-
-### Version 2.0 (Q4 2024)
-- [ ] Marketplace for meal plans
-- [ ] Professional chef features
-- [ ] Enterprise meal planning
-- [ ] Advanced AI nutritionist
 
 ## 🙏 Acknowledgments
 
-- Open source libraries and their maintainers
-- Nutrition databases (USDA, FoodData Central)
-- The Rust and React communities
-- Beta testers and early adopters
+- **Rust Community** - Amazing ecosystem and tools
+- **React Team** - Revolutionary frontend framework
+- **PostgreSQL** - Reliable and powerful database
+- **Material-UI** - Beautiful component library
+- **Docker** - Containerization made easy
 
 ---
 
-**Made with ❤️ for healthier eating and better meal planning**
+**Built with ❤️ by the Meal Prep Pro team**

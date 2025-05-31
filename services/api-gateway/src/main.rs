@@ -1,193 +1,155 @@
 use axum::{
-    extract::{State, WebSocketUpgrade},
-    http::Method,
-    middleware,
-    response::{IntoResponse, Response},
-    routing::{get, post, put, delete},
-    Json, Router,
+    extract::{Query, State, WebSocketUpgrade},
+    http::StatusCode,
+    response::{IntoResponse, Json},
+    routing::{get, post, put},
+    Router,
 };
-use tower_http::{
-    cors::{Any, CorsLayer},
-    trace::TraceLayer,
-    compression::CompressionLayer,
-};
+use tower_http::cors::CorsLayer;
+use tower::ServiceBuilder;
+use hyper::header::{AUTHORIZATION, ACCEPT, CONTENT_TYPE};
 use std::sync::Arc;
-use prometheus::{Encoder, TextEncoder};
-use std::net::SocketAddr;
+use std::env;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
+// Module declarations
 mod auth;
-mod handlers;
-mod middleware_layer;
-mod websocket;
-mod services;
-mod models;
-mod database;
 mod cache;
+mod database;
 mod metrics;
+mod services;
+mod websocket;
+mod middleware_layer;
+mod models;
+mod handlers;
 
-use handlers::*;
-use services::ServiceOrchestrator;
+// Use statements for internal modules
+use auth::AuthService;
+use cache::CacheService;
+use database::DatabaseManager;
+use metrics::MetricsService;
+use services::ServiceClient;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: sqlx::PgPool,
-    pub redis: redis::Client,
-    pub service_orchestrator: Arc<ServiceOrchestrator>,
-    pub websocket_manager: Arc<websocket::WebSocketManager>,
-    pub metrics: Arc<metrics::MetricsCollector>,
+    pub db: Arc<DatabaseManager>,
+    pub auth_service: Arc<AuthService>,
+    pub cache_service: Arc<CacheService>,
+    pub metrics_service: Arc<MetricsService>,
+    pub service_client: Arc<ServiceClient>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Initialize tracing
     tracing_subscriber::fmt::init();
 
-    let database_url = std::env::var("DATABASE_URL")
+    // Load environment variables
+    dotenvy::dotenv().ok();
+
+    let database_url = env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep".to_string());
     
-    let redis_url = std::env::var("REDIS_URL")
+    let redis_url = env::var("REDIS_URL")
         .unwrap_or_else(|_| "redis://redis:6379".to_string());
 
-    let db = sqlx::PgPool::connect(&database_url).await?;
-    let redis = redis::Client::open(redis_url)?;
-    
-    sqlx::migrate!("./migrations").run(&db).await?;
+    let jwt_secret = env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "your-secret-key-here".to_string());
 
-    let service_orchestrator = Arc::new(ServiceOrchestrator::new().await?);
-    let websocket_manager = Arc::new(websocket::WebSocketManager::new());
-    let metrics = Arc::new(metrics::MetricsCollector::new());
+    // Initialize services
+    let db = Arc::new(DatabaseManager::new(&database_url).await?);
+    let auth_service = Arc::new(AuthService::new(jwt_secret));
+    let cache_service = Arc::new(CacheService::new(&redis_url).await?);
+    let metrics_service = Arc::new(MetricsService::new());
+    let service_client = Arc::new(ServiceClient::new());
+
+    // Run database migrations
+    db.migrate().await?;
 
     let app_state = AppState {
         db,
-        redis,
-        service_orchestrator,
-        websocket_manager,
-        metrics,
+        auth_service,
+        cache_service,
+        metrics_service,
+        service_client,
     };
 
-    let app = create_router(app_state);
+    // Setup CORS
+    let cors = CorsLayer::new()
+        .allow_origin(tower_http::cors::Any)
+        .allow_methods(tower_http::cors::Any)
+        .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
-    tracing::info!("🚀 Advanced Meal Prep API Gateway running on port 8080");
-    
-    axum::serve(listener, app).await?;
-    Ok(())
-}
-
-fn create_router(state: AppState) -> Router {
-    Router::new()
-        // Authentication routes
-        .route("/api/auth/register", post(auth_handlers::register))
-        .route("/api/auth/login", post(auth_handlers::login))
-        .route("/api/auth/refresh", post(auth_handlers::refresh_token))
+    // Build the application router
+    let app = Router::new()
+        // Health check endpoints
+        .route("/health", get(health_check))
+        .route("/ready", get(readiness_check))
         
-        // User management
-        .route("/api/users/profile", get(user_handlers::get_profile))
-        .route("/api/users/profile", put(user_handlers::update_profile))
-        .route("/api/users/preferences", get(user_handlers::get_preferences))
-        .route("/api/users/preferences", put(user_handlers::update_preferences))
+        // Authentication routes
+        .route("/api/auth/register", post(handlers::auth::register))
+        .route("/api/auth/login", post(handlers::auth::login))
+        .route("/api/auth/logout", post(handlers::auth::logout))
+        .route("/api/auth/me", get(handlers::auth::get_current_user))
+        
+        // User management routes
+        .route("/api/users/profile", get(handlers::users::get_profile))
+        .route("/api/users/profile", put(handlers::users::update_profile))
+        .route("/api/users/preferences", get(handlers::users::get_preferences))
+        .route("/api/users/preferences", put(handlers::users::update_preferences))
+        
+        // Recipe and meal routes
+        .route("/api/recipes", get(handlers::recipes::list_recipes))
+        .route("/api/recipes", post(handlers::recipes::create_recipe))
+        .route("/api/recipes/:id", get(handlers::recipes::get_recipe))
+        .route("/api/recipes/:id", put(handlers::recipes::update_recipe))
+        .route("/api/recipes/:id", axum::routing::delete(handlers::recipes::delete_recipe))
         
         // Meal planning routes
-        .route("/api/meals", get(meal_handlers::list_meals))
-        .route("/api/meals", post(meal_handlers::create_meal))
-        .route("/api/meals/:id", get(meal_handlers::get_meal))
-        .route("/api/meals/:id", put(meal_handlers::update_meal))
-        .route("/api/meals/:id", delete(meal_handlers::delete_meal))
-        .route("/api/meals/search", get(meal_handlers::search_meals))
-        .route("/api/meals/recommendations", get(meal_handlers::get_recommendations))
+        .route("/api/meal-plans", get(handlers::meal_plans::list_meal_plans))
+        .route("/api/meal-plans", post(handlers::meal_plans::create_meal_plan))
         
-        // Meal planning
-        .route("/api/meal-plans", get(meal_plan_handlers::list_plans))
-        .route("/api/meal-plans", post(meal_plan_handlers::create_plan))
-        .route("/api/meal-plans/:id", get(meal_plan_handlers::get_plan))
-        .route("/api/meal-plans/:id", put(meal_plan_handlers::update_plan))
-        .route("/api/meal-plans/generate", post(meal_plan_handlers::generate_ai_plan))
+        // Nutrition routes
+        .route("/api/nutrition/analyze", post(handlers::nutrition::analyze_nutrition))
+        .route("/api/nutrition/goals", get(handlers::nutrition::get_goals))
+        .route("/api/nutrition/goals", put(handlers::nutrition::update_goals))
         
-        // Nutrition tracking
-        .route("/api/nutrition/log", post(nutrition_handlers::log_meal))
-        .route("/api/nutrition/daily", get(nutrition_handlers::get_daily_nutrition))
-        .route("/api/nutrition/weekly", get(nutrition_handlers::get_weekly_nutrition))
-        .route("/api/nutrition/goals", get(nutrition_handlers::get_goals))
-        .route("/api/nutrition/goals", put(nutrition_handlers::update_goals))
-        .route("/api/nutrition/analysis", get(nutrition_handlers::get_nutritional_analysis))
+        // WebSocket endpoint
+        .route("/ws", get(websocket::websocket_handler))
         
-        // Shopping lists
-        .route("/api/shopping-lists", get(shopping_handlers::list_shopping_lists))
-        .route("/api/shopping-lists", post(shopping_handlers::create_shopping_list))
-        .route("/api/shopping-lists/:id", get(shopping_handlers::get_shopping_list))
-        .route("/api/shopping-lists/:id/items", post(shopping_handlers::add_items))
-        .route("/api/shopping-lists/:id/optimize", post(shopping_handlers::optimize_list))
+        // Metrics endpoint
+        .route("/metrics", get(metrics::metrics_handler))
         
-        // Analytics and insights
-        .route("/api/analytics/dashboard", get(analytics_handlers::get_dashboard))
-        .route("/api/analytics/trends", get(analytics_handlers::get_trends))
-        .route("/api/analytics/predictions", get(analytics_handlers::get_predictions))
-        .route("/api/analytics/insights", get(analytics_handlers::get_insights))
-        
-        // Recipe management
-        .route("/api/recipes", get(recipe_handlers::list_recipes))
-        .route("/api/recipes", post(recipe_handlers::create_recipe))
-        .route("/api/recipes/:id", get(recipe_handlers::get_recipe))
-        .route("/api/recipes/:id/scale", post(recipe_handlers::scale_recipe))
-        .route("/api/recipes/import", post(recipe_handlers::import_recipe))
-        
-        // Inventory management
-        .route("/api/inventory", get(inventory_handlers::get_inventory))
-        .route("/api/inventory/items", post(inventory_handlers::add_item))
-        .route("/api/inventory/items/:id", put(inventory_handlers::update_item))
-        .route("/api/inventory/expiring", get(inventory_handlers::get_expiring))
-        
-        // WebSocket for real-time updates
-        .route("/ws", get(websocket_handler))
-        
-        // Health and metrics
-        .route("/health", get(health_check))
-        .route("/metrics", get(metrics_handler))
-        
-        .with_state(state.clone())
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            middleware_layer::auth_middleware,
-        ))
         .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(vec![Method::GET, Method::POST, Method::PUT, Method::DELETE])
-                .allow_headers(Any),
+            ServiceBuilder::new()
+                .layer(cors)
+                .layer(middleware_layer::MetricsMiddleware::new())
+                .into_inner()
         )
-        .layer(TraceLayer::new_for_http())
-        .layer(CompressionLayer::new())
-}
+        .with_state(app_state);
 
-async fn websocket_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<AppState>,
-) -> Response {
-    ws.on_upgrade(|socket| websocket::handle_socket(socket, state))
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
+    tracing::info!("API Gateway server starting on 0.0.0.0:8080");
+    
+    axum::serve(listener, app).await?;
+    
+    Ok(())
 }
 
 async fn health_check() -> impl IntoResponse {
     Json(serde_json::json!({
         "status": "healthy",
-        "timestamp": chrono::Utc::now(),
-        "version": env!("CARGO_PKG_VERSION"),
-        "services": {
-            "database": "connected",
-            "redis": "connected",
-            "microservices": "operational"
-        }
+        "timestamp": chrono::Utc::now().to_rfc3339()
     }))
 }
 
-async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
-    state.metrics.export_metrics().await
-}
-
-// Add this function to handle metrics endpoint
-async fn metrics() -> String {
-    let encoder = TextEncoder::new();
-    let metric_families = prometheus::gather();
-    let mut buffer = Vec::new();
-    
-    encoder.encode(&metric_families, &mut buffer).unwrap();
-    String::from_utf8(buffer).unwrap()
+async fn readiness_check(
+    State(_state): State<AppState>,
+) -> impl IntoResponse {
+    // TODO: Add actual readiness checks for database, redis, etc.
+    Json(serde_json::json!({
+        "status": "ready",
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
 }
