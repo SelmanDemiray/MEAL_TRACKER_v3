@@ -1,67 +1,59 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 interface WebSocketContextType {
-  socket: WebSocket | null;
   isConnected: boolean;
   sendMessage: (message: any) => void;
+  lastMessage: any;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
-export const useWebSocket = () => {
-  const context = useContext(WebSocketContext);
-  if (!context) {
-    throw new Error('useWebSocket must be used within a WebSocketProvider');
-  }
-  return context;
-};
-
-interface WebSocketProviderProps {
-  children: ReactNode;
-}
-
-export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }) => {
-  const [socket, setSocket] = useState<WebSocket | null>(null);
+export const WebSocketProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
+  const [lastMessage, setLastMessage] = useState<any>(null);
+  const [ws, setWs] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    const wsUrl =
-      process.env.NODE_ENV === 'production'
-        ? 'wss://api.mealprep.pro/ws'
-        : 'ws://localhost:38080/ws';
-
-    const ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-      setIsConnected(true);
-      console.log('WebSocket connected');
-    };
-
-    ws.onclose = () => {
-      setIsConnected(false);
-      console.log('WebSocket disconnected');
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    setSocket(ws);
-
+    // Mock WebSocket connection for development
+    setIsConnected(true);
+    
+    // In production, replace with actual WebSocket connection:
+    // const websocket = new WebSocket('ws://localhost:8080/ws');
+    // websocket.onopen = () => setIsConnected(true);
+    // websocket.onclose = () => setIsConnected(false);
+    // websocket.onmessage = (event) => setLastMessage(JSON.parse(event.data));
+    // setWs(websocket);
+    
     return () => {
-      ws.close();
+      if (ws) {
+        ws.close();
+      }
     };
   }, []);
 
   const sendMessage = (message: any) => {
-    if (socket && isConnected) {
-      socket.send(JSON.stringify(message));
+    if (ws && isConnected) {
+      ws.send(JSON.stringify(message));
+    } else {
+      console.log('Mock WebSocket message:', message);
     }
   };
 
   return (
-    <WebSocketContext.Provider value={{ socket, isConnected, sendMessage }}>
+    <WebSocketContext.Provider value={{
+      isConnected,
+      sendMessage,
+      lastMessage
+    }}>
       {children}
     </WebSocketContext.Provider>
   );
+};
+
+export const useWebSocket = () => {
+  const context = useContext(WebSocketContext);
+  if (context === undefined) {
+    throw new Error('useWebSocket must be used within a WebSocketProvider');
+  }
+  return context;
 };

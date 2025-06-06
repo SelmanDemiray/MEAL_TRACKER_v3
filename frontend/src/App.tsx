@@ -5,7 +5,7 @@ import { CssBaseline, GlobalStyles } from '@mui/material';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { useAuth } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './hooks/useAuth';
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { AIAssistantProvider } from './contexts/AIAssistantContext';
 
@@ -196,171 +196,173 @@ function App() {
         <ThemeProvider theme={theme}>
           <CssBaseline />
           {globalStyles}
-          <WebSocketProvider>
-            <AIAssistantProvider>
-              <Router>
-                <div className="App">
-                  <AnimatePresence mode="wait">
-                    <Routes>
-                      <Route
-                        path="/login"
-                        element={
-                          <PublicRoute>
-                            <Suspense fallback={<LoadingScreen />}>
-                              <motion.div
-                                initial="initial"
-                                animate="in"
-                                exit="out"
-                                variants={pageVariants}
-                                transition={pageTransition}
-                              >
-                                <Login />
-                              </motion.div>
-                            </Suspense>
-                          </PublicRoute>
-                        }
-                      />
-                      <Route
-                        path="/register"
-                        element={
-                          <PublicRoute>
-                            <Suspense fallback={<LoadingScreen />}>
-                              <motion.div
-                                initial="initial"
-                                animate="in"
-                                exit="out"
-                                variants={pageVariants}
-                                transition={pageTransition}
-                              >
-                                <Register />
-                              </motion.div>
-                            </Suspense>
-                          </PublicRoute>
-                        }
-                      />
-                      <Route
-                        path="/*"
-                        element={
-                          <ProtectedRoute>
-                            <NavigationBar />
-                            <main style={{ marginTop: '64px', minHeight: 'calc(100vh - 64px)' }}>
+          <AuthProvider>
+            <WebSocketProvider>
+              <AIAssistantProvider>
+                <Router>
+                  <div className="App">
+                    <AnimatePresence mode="wait">
+                      <Routes>
+                        <Route
+                          path="/login"
+                          element={
+                            <PublicRoute>
                               <Suspense fallback={<LoadingScreen />}>
-                                <AnimatePresence mode="wait">
-                                  <Routes>
-                                    <Route
-                                      path="/dashboard"
-                                      element={
-                                        <motion.div
-                                          initial="initial"
-                                          animate="in"
-                                          exit="out"
-                                          variants={pageVariants}
-                                          transition={pageTransition}
-                                        >
-                                          <Dashboard />
-                                        </motion.div>
-                                      }
-                                    />
-                                    <Route
-                                      path="/meal-planning"
-                                      element={
-                                        <motion.div
-                                          initial="initial"
-                                          animate="in"
-                                          exit="out"
-                                          variants={pageVariants}
-                                          transition={pageTransition}
-                                        >
-                                          <MealPlanning />
-                                        </motion.div>
-                                      }
-                                    />
-                                    <Route
-                                      path="/nutrition"
-                                      element={
-                                        <motion.div
-                                          initial="initial"
-                                          animate="in"
-                                          exit="out"
-                                          variants={pageVariants}
-                                          transition={pageTransition}
-                                        >
-                                          <NutritionTracking />
-                                        </motion.div>
-                                      }
-                                    />
-                                    <Route
-                                      path="/recipes"
-                                      element={
-                                        <motion.div
-                                          initial="initial"
-                                          animate="in"
-                                          exit="out"
-                                          variants={pageVariants}
-                                          transition={pageTransition}
-                                        >
-                                          <RecipeManager />
-                                        </motion.div>
-                                      }
-                                    />
-                                    <Route
-                                      path="/shopping"
-                                      element={
-                                        <motion.div
-                                          initial="initial"
-                                          animate="in"
-                                          exit="out"
-                                          variants={pageVariants}
-                                          transition={pageTransition}
-                                        >
-                                          <ShoppingLists />
-                                        </motion.div>
-                                      }
-                                    />
-                                    <Route
-                                      path="/analytics"
-                                      element={
-                                        <motion.div
-                                          initial="initial"
-                                          animate="in"
-                                          exit="out"
-                                          variants={pageVariants}
-                                          transition={pageTransition}
-                                        >
-                                          <Analytics />
-                                        </motion.div>
-                                      }
-                                    />
-                                    <Route
-                                      path="/profile"
-                                      element={
-                                        <motion.div
-                                          initial="initial"
-                                          animate="in"
-                                          exit="out"
-                                          variants={pageVariants}
-                                          transition={pageTransition}
-                                        >
-                                          <Profile />
-                                        </motion.div>
-                                      }
-                                    />
-                                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                                  </Routes>
-                                </AnimatePresence>
+                                <motion.div
+                                  initial="initial"
+                                  animate="in"
+                                  exit="out"
+                                  variants={pageVariants}
+                                  transition={pageTransition}
+                                >
+                                  <Login />
+                                </motion.div>
                               </Suspense>
-                            </main>
-                            <AIFloatingAssistant />
-                            <NotificationCenter />
-                          </ProtectedRoute>
-                        }
-                      />
-                    </Routes>
-                  </AnimatePresence>
-                </div>
-              </Router>
-            </AIAssistantProvider>
-          </WebSocketProvider>
+                            </PublicRoute>
+                          }
+                        />
+                        <Route
+                          path="/register"
+                          element={
+                            <PublicRoute>
+                              <Suspense fallback={<LoadingScreen />}>
+                                <motion.div
+                                  initial="initial"
+                                  animate="in"
+                                  exit="out"
+                                  variants={pageVariants}
+                                  transition={pageTransition}
+                                >
+                                  <Register />
+                                </motion.div>
+                              </Suspense>
+                            </PublicRoute>
+                          }
+                        />
+                        <Route
+                          path="/*"
+                          element={
+                            <ProtectedRoute>
+                              <NavigationBar />
+                              <main style={{ marginTop: '64px', minHeight: 'calc(100vh - 64px)' }}>
+                                <Suspense fallback={<LoadingScreen />}>
+                                  <AnimatePresence mode="wait">
+                                    <Routes>
+                                      <Route
+                                        path="/dashboard"
+                                        element={
+                                          <motion.div
+                                            initial="initial"
+                                            animate="in"
+                                            exit="out"
+                                            variants={pageVariants}
+                                            transition={pageTransition}
+                                          >
+                                            <Dashboard />
+                                          </motion.div>
+                                        }
+                                      />
+                                      <Route
+                                        path="/meal-planning"
+                                        element={
+                                          <motion.div
+                                            initial="initial"
+                                            animate="in"
+                                            exit="out"
+                                            variants={pageVariants}
+                                            transition={pageTransition}
+                                          >
+                                            <MealPlanning />
+                                          </motion.div>
+                                        }
+                                      />
+                                      <Route
+                                        path="/nutrition"
+                                        element={
+                                          <motion.div
+                                            initial="initial"
+                                            animate="in"
+                                            exit="out"
+                                            variants={pageVariants}
+                                            transition={pageTransition}
+                                          >
+                                            <NutritionTracking />
+                                          </motion.div>
+                                        }
+                                      />
+                                      <Route
+                                        path="/recipes"
+                                        element={
+                                          <motion.div
+                                            initial="initial"
+                                            animate="in"
+                                            exit="out"
+                                            variants={pageVariants}
+                                            transition={pageTransition}
+                                          >
+                                            <RecipeManager />
+                                          </motion.div>
+                                        }
+                                      />
+                                      <Route
+                                        path="/shopping"
+                                        element={
+                                          <motion.div
+                                            initial="initial"
+                                            animate="in"
+                                            exit="out"
+                                            variants={pageVariants}
+                                            transition={pageTransition}
+                                          >
+                                            <ShoppingLists />
+                                          </motion.div>
+                                        }
+                                      />
+                                      <Route
+                                        path="/analytics"
+                                        element={
+                                          <motion.div
+                                            initial="initial"
+                                            animate="in"
+                                            exit="out"
+                                            variants={pageVariants}
+                                            transition={pageTransition}
+                                          >
+                                            <Analytics />
+                                          </motion.div>
+                                        }
+                                      />
+                                      <Route
+                                        path="/profile"
+                                        element={
+                                          <motion.div
+                                            initial="initial"
+                                            animate="in"
+                                            exit="out"
+                                            variants={pageVariants}
+                                            transition={pageTransition}
+                                          >
+                                            <Profile />
+                                          </motion.div>
+                                        }
+                                      />
+                                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                                    </Routes>
+                                  </AnimatePresence>
+                                </Suspense>
+                              </main>
+                              <AIFloatingAssistant />
+                              <NotificationCenter />
+                            </ProtectedRoute>
+                          }
+                        />
+                      </Routes>
+                    </AnimatePresence>
+                  </div>
+                </Router>
+              </AIAssistantProvider>
+            </WebSocketProvider>
+          </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>

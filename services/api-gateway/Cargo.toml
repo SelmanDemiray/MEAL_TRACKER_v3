@@ -8,27 +8,24 @@ name = "api-gateway"
 path = "src/main.rs"
 
 [dependencies]
-tokio = { version = "1.0", features = ["full"] }
-axum = { version = "0.7", features = ["ws", "macros"] }
-tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip"] }
+tokio = { version = "1.40", features = ["full"] }
+axum = { version = "0.8", features = ["ws"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-uuid = { version = "1.0", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "migrate"] }
-redis = { version = "0.23", features = ["tokio-comp"] }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+uuid = { version = "1.8", features = ["v4", "serde"] }
+chrono = { version = "0.4.38", features = ["serde"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = "0.3"
 anyhow = "1.0"
-thiserror = "1.0"
-reqwest = { version = "0.11", features = ["json"] }
-jsonwebtoken = "9.1"
-bcrypt = "0.15"
-validator = { version = "0.16", features = ["derive"] }
-futures = "0.3"
-dashmap = "5.5"
-prometheus = "0.13"
-metrics = "0.21"
-config = "0.13"
-clap = { version = "4.0", features = ["derive"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "compression-gzip", "trace"] }
+redis = { version = "0.27", features = ["aio", "tokio-comp"] }
+bcrypt = "0.17"
+jsonwebtoken = "9.2"
+validator = { version = "0.20", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json"] }
+prometheus = "0.14"
+dashmap = "6.1"
+urlencoding = "2.1"
+axum-extra = { version = "0.10", features = ["typed-header"] }

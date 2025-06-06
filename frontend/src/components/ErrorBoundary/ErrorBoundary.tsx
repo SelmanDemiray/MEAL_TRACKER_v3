@@ -1,30 +1,54 @@
-import React from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Box, Typography, Button } from '@mui/material';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 interface State {
   hasError: boolean;
+  error: Error | null;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
+class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null,
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
   }
 
-  static getDerivedStateFromError(_: Error): State {
-    return { hasError: true };
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
-  }
-
-  render() {
+  public render() {
     if (this.state.hasError) {
-      return <h1>Something went wrong.</h1>;
+      return (
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          minHeight="100vh"
+          p={3}
+        >
+          <Typography variant="h4" gutterBottom>
+            Oops! Something went wrong
+          </Typography>
+          <Typography variant="body1" color="text.secondary" mb={3}>
+            We're sorry for the inconvenience. Please try refreshing the page.
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => window.location.reload()}
+          >
+            Refresh Page
+          </Button>
+        </Box>
+      );
     }
 
     return this.props.children;

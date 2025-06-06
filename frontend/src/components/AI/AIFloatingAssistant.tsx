@@ -1,18 +1,24 @@
 import React from 'react';
 import { Fab } from '@mui/material';
-import { SmartToy } from '@mui/icons-material';
+import { Psychology } from '@mui/icons-material';
+import { useAIAssistant } from '../../contexts/AIAssistantContext';
 
 const AIFloatingAssistant: React.FC = () => {
+  const { showAssistant } = useAIAssistant();
+
   return (
     <Fab
-      color="primary"
+      color="secondary"
+      aria-label="AI Assistant"
       sx={{
         position: 'fixed',
-        bottom: 16,
-        right: 16,
+        bottom: 24,
+        right: 24,
+        zIndex: 1000,
       }}
+      onClick={showAssistant}
     >
-      <SmartToy />
+      <Psychology />
     </Fab>
   );
 };

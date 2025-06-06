@@ -9,9 +9,10 @@ const LoadingScreen: React.FC = () => {
       alignItems="center"
       justifyContent="center"
       minHeight="100vh"
+      bgcolor="background.default"
     >
-      <CircularProgress size={60} />
-      <Typography variant="h6" sx={{ mt: 2 }}>
+      <CircularProgress size={60} thickness={4} />
+      <Typography variant="h6" mt={2} color="text.secondary">
         Loading...
       </Typography>
     </Box>

@@ -4,22 +4,21 @@ interface User {
   id: string;
   username: string;
   email: string;
+  role: string;
 }
 
 interface AuthState {
   user: User | null;
   token: string | null;
+  isLoading: boolean;
   isAuthenticated: boolean;
-  loading: boolean;
-  error: string | null;
 }
 
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem('authToken'),
-  isAuthenticated: !!localStorage.getItem('authToken'),
-  loading: false,
-  error: null,
+  token: localStorage.getItem('token'),
+  isLoading: false,
+  isAuthenticated: !!localStorage.getItem('token'),
 };
 
 const authSlice = createSlice({
@@ -27,34 +26,31 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     loginStart: (state) => {
-      state.loading = true;
-      state.error = null;
+      state.isLoading = true;
     },
     loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
-      state.loading = false;
+      state.isLoading = false;
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
-      localStorage.setItem('authToken', action.payload.token);
+      localStorage.setItem('token', action.payload.token);
+      localStorage.setItem('user', JSON.stringify(action.payload.user));
     },
-    loginFailure: (state, action: PayloadAction<string>) => {
-      state.loading = false;
-      state.error = action.payload;
+    loginFailure: (state) => {
+      state.isLoading = false;
+      state.user = null;
+      state.token = null;
       state.isAuthenticated = false;
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
-      state.loading = false;
-      state.error = null;
-      localStorage.removeItem('authToken');
-    },
-    clearError: (state) => {
-      state.error = null;
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     },
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, clearError } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout } = authSlice.actions;
 export default authSlice.reducer;

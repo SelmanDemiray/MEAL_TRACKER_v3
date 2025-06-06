@@ -1,114 +1,213 @@
-# Docker Cleanup Script for Meal_Prep_3 Project
-# This script performs a complete wipe of all Docker resources
+# Meal Prep Pro - Docker Cleanup Script for Windows
+# This script automatically cleans up all Docker resources for the Meal Prep Pro project
 
-Write-Host "Starting Docker cleanup for Meal_Prep_3 project..." -ForegroundColor Yellow
+param(
+    [switch]$Confirm,
+    [switch]$Help
+)
 
-# Stop all running containers
-Write-Host "Stopping all running containers..." -ForegroundColor Cyan
-docker stop $(docker ps -q) 2>$null
-
-# Remove all containers (including stopped ones)
-Write-Host "Removing all containers..." -ForegroundColor Cyan
-docker rm $(docker ps -aq) 2>$null
-
-# Remove all images associated with the project
-Write-Host "Removing project images..." -ForegroundColor Cyan
-docker rmi $(docker images -q --filter reference="meal*") 2>$null
-docker rmi $(docker images -q --filter reference="*meal*") 2>$null
-
-# Remove all volumes
-Write-Host "Removing all volumes..." -ForegroundColor Cyan
-docker volume rm $(docker volume ls -q) 2>$null
-
-# Remove all custom networks (except default ones)
-Write-Host "Removing custom networks..." -ForegroundColor Cyan
-docker network rm $(docker network ls -q --filter type=custom) 2>$null
-
-# Clean up dangling images, containers, networks, and build cache
-Write-Host "Performing system prune..." -ForegroundColor Cyan
-docker system prune -af --volumes
-
-# Additional cleanup for Docker Compose
-Write-Host "Cleaning up Docker Compose resources..." -ForegroundColor Cyan
-if (Test-Path "docker-compose.yml") {
-    docker-compose down --volumes --rmi all --remove-orphans 2>$null
-}
-if (Test-Path "docker-compose.yaml") {
-    docker-compose down --volumes --rmi all --remove-orphans 2>$null
+# Colors for output
+$colors = @{
+    Red = 'Red'
+    Green = 'Green' 
+    Yellow = 'Yellow'
+    Cyan = 'Cyan'
 }
 
-Write-Host "Docker cleanup completed!" -ForegroundColor Green
-Write-Host "Verifying cleanup..." -ForegroundColor Yellow
-
-# Verify cleanup
-Write-Host "`nRemaining containers:" -ForegroundColor Magenta
-docker ps -a
-
-Write-Host "`nRemaining images:" -ForegroundColor Magenta
-docker images
-
-Write-Host "`nRemaining volumes:" -ForegroundColor Magenta
-docker volume ls
-
-Write-Host "`nRemaining networks:" -ForegroundColor Magenta
-docker network ls
-
-Write-Host "`nDocker disk usage:" -ForegroundColor Magenta
-docker system df
-
-# Meal Prep Pro - Docker Cleanup Script
-# This script helps clean up Docker containers, images, and volumes for development
-
-Write-Host "🧹 Meal Prep Pro - Docker Cleanup Script" -ForegroundColor Cyan
-Write-Host "=========================================" -ForegroundColor Cyan
-
-# Function to ask for user confirmation
-function Get-Confirmation {
-    param([string]$message)
-    $response = Read-Host "$message (y/N)"
-    return ($response -eq "y" -or $response -eq "Y" -or $response -eq "yes")
+function Write-ColorOutput {
+    param([string]$Message, [string]$Color = 'White')
+    Write-Host $Message -ForegroundColor $Color
 }
 
-# Stop all running containers
-if (Get-Confirmation "Stop all Meal Prep containers?") {
-    Write-Host "Stopping containers..." -ForegroundColor Yellow
-    docker-compose down
+function Show-Help {
+    Write-ColorOutput "🧹 Meal Prep Pro - Docker Cleanup Script" $colors.Cyan
+    Write-ColorOutput "=================================================="
+    Write-ColorOutput ""
+    Write-ColorOutput "Usage: .\docker-cleanup.ps1 [OPTIONS]"
+    Write-ColorOutput ""
+    Write-ColorOutput "Options:"
+    Write-ColorOutput "  -Confirm      Prompt for confirmation before cleanup"
+    Write-ColorOutput "  -Help         Show this help message"
+    Write-ColorOutput ""
+    Write-ColorOutput "This script will automatically:"
+    Write-ColorOutput "  1. Stop all running containers"
+    Write-ColorOutput "  2. Remove all project containers"
+    Write-ColorOutput "  3. Remove all project images"
+    Write-ColorOutput "  4. Remove all project volumes (data will be lost!)"
+    Write-ColorOutput "  5. Remove all project networks"
+    Write-ColorOutput "  6. Prune unused Docker resources"
+    Write-ColorOutput ""
+    Write-ColorOutput "⚠️  WARNING: This will delete all data in the containers!" $colors.Red
+    Write-ColorOutput "🚀 By default, this script runs automatically without confirmation." $colors.Yellow
+    Write-ColorOutput "💡 Use -Confirm flag if you want to be prompted before cleanup." $colors.Yellow
 }
 
-# Remove containers
-if (Get-Confirmation "Remove all Meal Prep containers?") {
-    Write-Host "Removing containers..." -ForegroundColor Yellow
-    docker-compose rm -f
-}
-
-# Remove images
-if (Get-Confirmation "Remove Meal Prep images?") {
-    Write-Host "Removing images..." -ForegroundColor Yellow
-    docker images | Select-String "mealprep|meal-prep" | ForEach-Object {
-        $imageName = ($_ -split '\s+')[0] + ":" + ($_ -split '\s+')[1]
-        docker rmi $imageName -f
+function Test-DockerRunning {
+    try {
+        docker info | Out-Null
+        return $true
+    }
+    catch {
+        Write-ColorOutput "❌ Docker is not running. Please start Docker and try again." $colors.Red
+        exit 1
     }
 }
 
-# Remove volumes (WARNING: This will delete all data!)
-if (Get-Confirmation "🚨 DANGER: Remove all volumes? This will DELETE ALL DATA!") {
-    Write-Host "Removing volumes..." -ForegroundColor Red
-    docker volume rm mealprep_postgres_data mealprep_redis_data mealprep_prometheus_data mealprep_grafana_data mealprep_ai_models 2>$null
+function Stop-MealPrepContainers {
+    Write-ColorOutput "🛑 Stopping all Meal Prep Pro containers..." $colors.Yellow
+    
+    try {
+        docker-compose down --remove-orphans
+        Write-ColorOutput "✅ Containers stopped successfully" $colors.Green
+        return $true
+    }
+    catch {
+        Write-ColorOutput "❌ Failed to stop containers: $_" $colors.Red
+        return $false
+    }
 }
 
-# Clean up Docker system
-if (Get-Confirmation "Clean up Docker system (remove unused containers, networks, images)?") {
-    Write-Host "Cleaning up Docker system..." -ForegroundColor Yellow
-    docker system prune -f
+function Remove-MealPrepImages {
+    Write-ColorOutput "🗑️  Removing Meal Prep Pro images..." $colors.Yellow
+    
+    try {
+        $images = docker images --format "{{.Repository}}:{{.Tag}}" | Where-Object { $_ -match "(meal_tracker_v3|mealprep)" }
+        
+        foreach ($image in $images) {
+            if ($image -ne "REPOSITORY:TAG") {
+                Write-ColorOutput "Removing image: $image"
+                docker rmi $image --force
+            }
+        }
+        
+        Write-ColorOutput "✅ Images cleaned up" $colors.Green
+        return $true
+    }
+    catch {
+        Write-ColorOutput "❌ Failed to remove images: $_" $colors.Red
+        return $false
+    }
 }
 
-# Optional: Clean up everything including volumes
-if (Get-Confirmation "🚨 NUCLEAR OPTION: Remove everything including all volumes?") {
-    Write-Host "Nuclear cleanup..." -ForegroundColor Red
-    docker system prune -a --volumes -f
+function Remove-MealPrepVolumes {
+    Write-ColorOutput "💾 Removing data volumes..." $colors.Yellow
+    
+    try {
+        $volumes = docker volume ls --format "{{.Name}}" | Where-Object { $_ -match "meal_tracker_v3" }
+        
+        foreach ($volume in $volumes) {
+            Write-ColorOutput "Removing volume: $volume"
+            docker volume rm $volume --force
+        }
+        
+        Write-ColorOutput "✅ Volumes cleaned up" $colors.Green
+        return $true
+    }
+    catch {
+        Write-ColorOutput "❌ Failed to remove volumes: $_" $colors.Red
+        return $false
+    }
 }
 
-Write-Host "✅ Cleanup completed!" -ForegroundColor Green
-Write-Host ""
-Write-Host "To rebuild and start fresh:" -ForegroundColor Cyan
-Write-Host "docker-compose up --build -d" -ForegroundColor White
+function Remove-MealPrepNetworks {
+    Write-ColorOutput "🌐 Removing networks..." $colors.Yellow
+    
+    try {
+        $networks = docker network ls --format "{{.Name}}" | Where-Object { $_ -match "meal_tracker_v3" }
+        
+        foreach ($network in $networks) {
+            Write-ColorOutput "Removing network: $network"
+            docker network rm $network
+        }
+        
+        Write-ColorOutput "✅ Networks cleaned up" $colors.Green
+        return $true
+    }
+    catch {
+        Write-ColorOutput "❌ Failed to remove networks: $_" $colors.Red
+        return $false
+    }
+}
+
+function Invoke-DockerSystemPrune {
+    Write-ColorOutput "🧽 Pruning unused Docker resources..." $colors.Yellow
+    
+    try {
+        docker system prune -f --volumes
+        Write-ColorOutput "✅ System pruned" $colors.Green
+        return $true
+    }
+    catch {
+        Write-ColorOutput "❌ Failed to prune system: $_" $colors.Red
+        return $false
+    }
+}
+
+function Start-AutomaticCleanup {
+    Test-DockerRunning
+    
+    Write-ColorOutput "🧹 Meal Prep Pro - Docker Cleanup Script" $colors.Cyan
+    Write-ColorOutput "=================================================="
+    Write-ColorOutput "Starting automatic cleanup of all Meal Prep Pro Docker resources..." $colors.Yellow
+    Write-ColorOutput "⚠️  WARNING: This will delete all data in the containers!" $colors.Red
+    Write-ColorOutput ""
+    
+    $success = $true
+    $success = (Stop-MealPrepContainers) -and $success
+    $success = (Remove-MealPrepImages) -and $success
+    $success = (Remove-MealPrepVolumes) -and $success
+    $success = (Remove-MealPrepNetworks) -and $success
+    $success = (Invoke-DockerSystemPrune) -and $success
+    
+    if ($success) {
+        Write-ColorOutput ""
+        Write-ColorOutput "🎉 Automatic cleanup completed successfully!" $colors.Green
+        Write-ColorOutput "💡 You can now run 'docker-compose up --build' to start fresh." $colors.Yellow
+    } else {
+        Write-ColorOutput ""
+        Write-ColorOutput "⚠️  Cleanup completed with some errors. Check the output above." $colors.Yellow
+    }
+}
+
+function Start-ConfirmedCleanup {
+    Test-DockerRunning
+    
+    Write-ColorOutput "🧹 Meal Prep Pro - Docker Cleanup Script" $colors.Cyan
+    Write-ColorOutput "=================================================="
+    Write-ColorOutput "This will remove all Meal Prep Pro containers, images, volumes, and networks." $colors.Yellow
+    $confirmation = Read-Host "Are you sure you want to continue? (y/N)"
+    
+    if ($confirmation -match '^[Yy]$') {
+        Write-ColorOutput ""
+        $success = $true
+        $success = (Stop-MealPrepContainers) -and $success
+        $success = (Remove-MealPrepImages) -and $success
+        $success = (Remove-MealPrepVolumes) -and $success
+        $success = (Remove-MealPrepNetworks) -and $success
+        $success = (Invoke-DockerSystemPrune) -and $success
+        
+        if ($success) {
+            Write-ColorOutput ""
+            Write-ColorOutput "🎉 Cleanup completed successfully!" $colors.Green
+            Write-ColorOutput "💡 You can now run 'docker-compose up --build' to start fresh." $colors.Yellow
+        } else {
+            Write-ColorOutput ""
+            Write-ColorOutput "⚠️  Cleanup completed with some errors. Check the output above." $colors.Yellow
+        }
+    } else {
+        Write-ColorOutput "🚫 Cleanup cancelled." $colors.Yellow
+    }
+}
+
+# Main execution
+if ($Help) {
+    Show-Help
+    exit 0
+}
+
+# Run with confirmation if -Confirm flag is used, otherwise run automatically
+if ($Confirm) {
+    Start-ConfirmedCleanup
+} else {
+    Start-AutomaticCleanup
+}

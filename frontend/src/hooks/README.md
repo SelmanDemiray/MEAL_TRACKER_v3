@@ -13,9 +13,9 @@ Comprehensive authentication management hook.
 import { useAuth } from './useAuth';
 
 function MyComponent() {
-  const { user, isAuthenticated, login, logout, loading } = useAuth();
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth();
   
-  if (loading) return <Loading />;
+  if (isLoading) return <Loading />;
   
   return (
     <div>
@@ -25,7 +25,7 @@ function MyComponent() {
           <button onClick={logout}>Logout</button>
         </div>
       ) : (
-        <button onClick={() => login('token')}>Login</button>
+        <LoginForm onSubmit={login} />
       )}
     </div>
   );
@@ -38,6 +38,8 @@ function MyComponent() {
 - User session persistence
 - Loading states
 - Error handling
+- Higher-order component for route protection
+- Authenticated API helper function
 
 ### 📊 Data Fetching Hooks
 

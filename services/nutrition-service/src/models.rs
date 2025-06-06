@@ -1,233 +1,199 @@
+use chrono::{DateTime, Utc, NaiveDate};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
-// Internal types for analysis
-#[derive(Debug, Clone, Serialize)]
-pub struct NutritionAnalysisInternal {
-    pub basic_nutrition: crate::BasicNutrition,
-    pub micronutrients: Vec<crate::Micronutrient>,
-    pub dietary_compliance: crate::DietaryCompliance,
-    pub environmental_impact: crate::EnvironmentalImpact,
+// Request structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionAnalysisRequest {
+    pub user_id: Option<Uuid>,
+    pub ingredients: Vec<Ingredient>,
+    pub meal_type: Option<String>,
+    pub serving_size: Option<f32>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct DailyNutritionAnalysisInternal {
-    pub total_nutrition: crate::BasicNutrition,
-    pub meal_breakdown: Vec<crate::MealNutritionBreakdown>,
-    pub goal_adherence: crate::GoalAdherence,
-    pub next_meal_suggestions: Vec<crate::MealSuggestion>,
-    pub hydration_reminder: bool,
-    pub sleep_nutrition_impact: crate::SleepNutritionImpact,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Ingredient {
+    pub name: String,
+    pub amount: f32,
+    pub unit: String,
+    pub preparation: Option<String>,
 }
 
-// AI insights types
-#[derive(Debug, Clone, Serialize)]
+// Core nutrition data structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BasicNutrition {
+    pub calories: f32,
+    pub protein: f32,
+    pub carbohydrates: f32,
+    pub fat: f32,
+    pub fiber: f32,
+    pub sugar: f32,
+    pub sodium: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Micronutrient {
+    pub name: String,
+    pub amount: f32,
+    pub unit: String,
+    pub daily_value_percentage: f32,
+    pub bioavailability: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DietaryCompliance {
+    pub vegetarian_friendly: bool,
+    pub vegan_friendly: bool,
+    pub gluten_free: bool,
+    pub dairy_free: bool,
+    pub keto_friendly: bool,
+    pub paleo_friendly: bool,
+    pub anti_inflammatory_score: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvironmentalImpact {
+    pub carbon_footprint_kg: f32,
+    pub water_usage_liters: f32,
+    pub sustainability_score: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OptimizationSuggestion {
+    pub suggestion_type: String,
+    pub description: String,
+    pub nutrition_impact: BasicNutrition,
+    pub implementation_difficulty: String,
+}
+
+// Main analysis result structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionAnalysis {
+    pub basic_nutrition: BasicNutrition,
+    pub micronutrients: HashMap<String, f32>,
+    pub health_score: f32,
+    pub dietary_compliance: DietaryCompliance,
+    pub environmental_impact: EnvironmentalImpact,
+    pub cost_estimate: Option<f32>,
+    pub allergen_warnings: Vec<String>,
+    pub preparation_tips: Vec<String>,
+}
+
+// AI recommendation structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MealRecommendation {
+    pub meal_id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub nutrition: BasicNutrition,
+    pub ingredients: Vec<Ingredient>,
+    pub instructions: Vec<String>,
+    pub prep_time_minutes: i32,
+    pub difficulty_level: String,
+    pub cost_estimate: f32,
+    pub recommendation_score: f32,
+    pub reasons: Vec<String>,
+}
+
+// Response structures
+#[derive(Debug, Serialize)]
+pub struct MealRecommendations {
+    pub meals: Vec<MealRecommendation>,
+    pub total_nutrition: BasicNutrition,
+    pub adherence_to_goals: f32,
+    pub variety_score: f32,
+}
+
+// Request types for different services
+#[derive(Debug, Deserialize)]
+pub struct RecommendationParams {
+    pub meal_type: Option<String>,
+    pub dietary_restrictions: Option<String>,
+    pub max_prep_time: Option<i32>,
+    pub budget_limit: Option<f32>,
+    pub cuisine_preference: Option<String>,
+    pub equipment_available: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthInsights {
     pub overall_score: f32,
     pub insights: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DailyInsights {
     pub recommendations: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MealOptimization {
-    pub suggestions: Vec<crate::OptimizationSuggestion>,
+    pub suggestions: Vec<OptimizationSuggestion>,
 }
 
-// Request types for different services
-#[derive(Debug, Deserialize)]
-pub struct SupplementRecommendationRequest {
-    pub user_id: Uuid,
-    pub current_nutrition: crate::BasicNutrition,
-    pub health_goals: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SupplementRecommendation {
-    pub name: String,
-    pub dosage: String,
-    pub reason: String,
-    pub confidence: f32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct NutritionGoalsRequest {
-    pub user_id: Uuid,
-    pub age: i32,
-    pub weight_kg: f32,
-    pub height_cm: f32,
-    pub activity_level: String,
-    pub goals: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NutritionGoals {
-    pub daily_calories: f32,
-    pub daily_protein: f32,
-    pub daily_carbs: f32,
-    pub daily_fat: f32,
-    pub daily_fiber: f32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GoalTrackingRequest {
-    pub user_id: Uuid,
-    pub current_intake: crate::BasicNutrition,
-    pub goals: NutritionGoals,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GoalProgress {
-    pub adherence_score: f32,
-    pub areas_for_improvement: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DeficiencyPredictionRequest {
-    pub user_id: Uuid,
-    pub nutrition_history: Vec<DailyNutritionHistory>,
-    pub health_indicators: Vec<String>,
-    pub time_period_days: i32,
-}
-
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeficiencyPrediction {
-    pub nutrient_name: String,
-    pub deficiency_risk: f32,
-    pub predicted_onset_days: Option<i32>,
-    pub severity: DeficiencySeverity,
-    pub recommendations: Vec<String>,
-    pub confidence_level: f32,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DeficiencySeverity {
-    Low,
-    Moderate,
-    High,
-    Critical,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct DailyNutritionHistory {
-    pub date: chrono::DateTime<chrono::Utc>,
-    pub nutrition: crate::BasicNutrition,
-    pub symptoms: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MealOptimizationRequest {
-    pub user_id: Uuid,
-    pub current_meal: Vec<crate::MealIngredient>,
-    pub nutrition_goals: Option<crate::BasicNutrition>,
-    pub dietary_restrictions: Vec<String>,
-    pub optimization_priorities: Vec<OptimizationPriority>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum OptimizationPriority {
-    Nutrition,
-    Cost,
-    Taste,
-    PrepTime,
-    Sustainability,
-}
-
-#[derive(Debug, Serialize)]
-pub struct MealOptimizationResult {
-    pub original_nutrition: crate::BasicNutrition,
-    pub optimized_nutrition: crate::BasicNutrition,
-    pub ingredient_changes: Vec<IngredientChange>,
-    pub improvement_score: f32,
-    pub cost_impact: f32,
-    pub prep_time_impact: i32,
-}
-
-#[derive(Debug, Serialize)]
-pub struct IngredientChange {
-    pub action: ChangeAction,
-    pub ingredient: String,
-    pub amount: Option<f32>,
-    pub unit: Option<String>,
-    pub reason: String,
-    pub nutrition_impact: crate::BasicNutrition,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ChangeAction {
-    Add,
-    Remove,
-    Increase,
-    Decrease,
-    Substitute,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct TrendAnalysisRequest {
-    pub user_id: Uuid,
-    pub start_date: chrono::DateTime<chrono::Utc>,
-    pub end_date: chrono::DateTime<chrono::Utc>,
-    pub metrics: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TrendAnalysisResult {
-    pub trends: Vec<NutritionTrend>,
-    pub insights: Vec<TrendInsight>,
-    pub predictions: Vec<TrendPrediction>,
-    pub recommendations: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct NutritionTrend {
-    pub metric: String,
-    pub data_points: Vec<TrendDataPoint>,
-    pub trend_direction: TrendDirection,
-    pub correlation_strength: f32,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TrendDataPoint {
-    pub date: chrono::DateTime<chrono::Utc>,
-    pub value: f32,
-    pub goal_value: Option<f32>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TrendDirection {
-    Improving,
-    Declining,
-    Stable,
-    Volatile,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TrendInsight {
-    pub category: String,
-    pub insight: String,
+    pub nutrient: String,
+    pub risk_level: String,
     pub confidence: f32,
-    pub action_required: bool,
+    pub recommendations: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct TrendPrediction {
-    pub metric: String,
-    pub predicted_value: f32,
-    pub prediction_date: chrono::DateTime<chrono::Utc>,
-    pub confidence_interval: (f32, f32),
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NutritionGoals {
+    pub target_calories: Option<f32>,
+    pub target_protein_g: Option<f32>,
+    pub target_carbs_g: Option<f32>,
+    pub target_fat_g: Option<f32>,
+    pub target_fiber_g: Option<f32>,
+    pub target_sodium_mg: Option<f32>,
 }
 
-// Re-export types from main.rs with proper derives
-pub use crate::{
-    BasicNutrition, Micronutrient, DietaryCompliance, OptimizationSuggestion,
-    EnvironmentalImpact, MealIngredient, LoggedMeal, MealNutritionBreakdown,
-    GoalAdherence, MealSuggestion, SleepNutritionImpact,
-    MealRecommendationRequest, MealRecommendation
-};
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyNutritionRequest {
+    pub user_id: Uuid,
+    pub date: NaiveDate,
+    pub nutrition: BasicNutrition,
+    pub meals: Vec<MealEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MealEntry {
+    pub meal_type: String,
+    pub food_items: Vec<Ingredient>,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyNutritionSummary {
+    pub user_id: Uuid,
+    pub date: NaiveDate,
+    pub total_nutrition: BasicNutrition,
+    pub goal_adherence: f32,
+    pub recommendations: Vec<String>,
+    pub meal_breakdown: Vec<MealNutritionBreakdown>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MealNutritionBreakdown {
+    pub meal_type: String,
+    pub nutrition: BasicNutrition,
+    pub percentage_of_daily: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SatietyPrediction {
+    pub satiety_score: f32,
+    pub duration_hours: f32,
+    pub factors: Vec<String>,
+}
+
+// Internal models for AI processing
+#[derive(Debug, Clone)]
+pub struct NutritionAnalysisInternal {
+    pub basic_nutrition: BasicNutrition,
+    pub micronutrients: HashMap<String, f32>,
+    pub dietary_compliance: DietaryCompliance,
+    pub environmental_impact: EnvironmentalImpact,
+}

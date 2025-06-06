@@ -1,36 +1,27 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Container,
-  Typography,
-  Paper,
   Grid,
   Card,
   CardContent,
+  Typography,
   Button,
   Chip,
   IconButton,
+  Paper,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  CalendarToday as CalendarIcon,
-  Restaurant as RestaurantIcon,
-  Schedule as ScheduleIcon,
+  AccessTime,
+  LocalFireDepartment,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
 
 // Type definitions
 interface Meal {
@@ -50,22 +41,17 @@ interface DayMeals {
 
 interface MealPlan {
   [day: string]: DayMeals;
-  Monday: DayMeals;
-  Tuesday: DayMeals;
-  Wednesday: DayMeals;
-  Thursday: DayMeals;
-  Friday: DayMeals;
-  Saturday: DayMeals;
-  Sunday: DayMeals;
 }
 
 type MealType = 'Breakfast' | 'Lunch' | 'Dinner';
 type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
 interface MealCardProps {
-  day: string;
+  day: DayOfWeek;
   mealType: MealType;
-  meal?: Meal;
+  meal: Meal;
+  onEdit: (day: DayOfWeek, mealType: MealType, meal: Meal) => void;
+  onDelete: (day: DayOfWeek, mealType: MealType) => void;
 }
 
 const mockMealPlan: MealPlan = {
@@ -106,338 +92,185 @@ const mockMealPlan: MealPlan = {
   }
 };
 
-const MealCard: React.FC<MealCardProps> = ({ day, mealType, meal }) => {
-  const [open, setOpen] = useState(false);
-
+const MealCard: React.FC<MealCardProps> = ({ day, mealType, meal, onEdit, onDelete }) => {
   return (
-    <>
-      <Card 
-        sx={{ 
-          height: '100%', 
-          cursor: 'pointer',
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: 4
-          }
-        }}
-        onClick={() => setOpen(true)}
-      >
-        <CardContent>
-          {meal ? (
-            <>
-              <Typography variant="h6" component="h3" gutterBottom>
-                {meal.name}
-              </Typography>
-              <Box display="flex" gap={1} flexWrap="wrap" mb={1}>
-                <Chip 
-                  icon={<RestaurantIcon />} 
-                  label={`${meal.calories} cal`} 
-                  size="small" 
-                  color="primary"
-                />
-                <Chip 
-                  icon={<ScheduleIcon />} 
-                  label={`${meal.prepTime} min`} 
-                  size="small" 
-                  color="secondary"
-                />
-              </Box>
-            </>
-          ) : (
-            <Box 
-              display="flex" 
-              flexDirection="column" 
-              alignItems="center" 
-              justifyContent="center"
-              minHeight={100}
-              color="text.secondary"
-            >
-              <AddIcon sx={{ fontSize: 48, mb: 1 }} />
-              <Typography variant="body2">
-                Add {mealType}
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {meal ? `Edit ${mealType}` : `Add ${mealType}`} for {day}
-        </DialogTitle>
-        <DialogContent>
-          <Box component="form" sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Meal Name"
-              defaultValue={meal?.name || ''}
-              margin="normal"
-            />
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Calories"
-                  type="number"
-                  defaultValue={meal?.calories || ''}
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  fullWidth
-                  label="Prep Time (min)"
-                  type="number"
-                  defaultValue={meal?.prepTime || ''}
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Difficulty</InputLabel>
-                  <Select defaultValue="Medium">
-                    <MenuItem value="Easy">Easy</MenuItem>
-                    <MenuItem value="Medium">Medium</MenuItem>
-                    <MenuItem value="Hard">Hard</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+          <Typography variant="h6" component="h3" fontSize="1rem">
+            {meal.name}
+          </Typography>
+          <Box>
+            <IconButton size="small" onClick={() => onEdit(day, mealType, meal)}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" onClick={() => onDelete(day, mealType)}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={() => setOpen(false)} variant="contained">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+        </Box>
+        
+        <Box display="flex" gap={1} mb={2}>
+          <Chip
+            icon={<LocalFireDepartment />}
+            label={`${meal.calories} cal`}
+            size="small"
+            color="primary"
+            variant="outlined"
+          />
+          <Chip
+            icon={<AccessTime />}
+            label={`${meal.prepTime} min`}
+            size="small"
+            color="secondary"
+            variant="outlined"
+          />
+        </Box>
+      </CardContent>
+    </Card>
   );
 };
 
 const MealPlanning: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState(0);
-  const [selectedWeek, setSelectedWeek] = useState(0);
-
-  const daysOfWeek: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const [mealPlan, setMealPlan] = useState<MealPlan>(mockMealPlan);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<{
+    day: DayOfWeek;
+    mealType: MealType;
+    meal: Meal;
+  } | null>(null);
+  
+  const days: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const mealTypes: MealType[] = ['Breakfast', 'Lunch', 'Dinner'];
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
+  const handleEditMeal = (day: DayOfWeek, mealType: MealType, meal: Meal) => {
+    setEditingMeal({ day, mealType, meal });
+    setEditDialogOpen(true);
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1
+  const handleDeleteMeal = (day: DayOfWeek, mealType: MealType) => {
+    setMealPlan(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [mealType]: { name: '', calories: 0, prepTime: 0 }
+      }
+    }));
+  };
+
+  const handleSaveMeal = () => {
+    if (editingMeal) {
+      setMealPlan(prev => ({
+        ...prev,
+        [editingMeal.day]: {
+          ...prev[editingMeal.day],
+          [editingMeal.mealType]: editingMeal.meal
+        }
+      }));
     }
+    setEditDialogOpen(false);
+    setEditingMeal(null);
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {/* Header */}
-        <motion.div variants={itemVariants}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-            <Box>
-              <Typography variant="h3" component="h1" gutterBottom>
-                🗓️ Meal Planning
+    <Box p={3}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Weekly Meal Plan
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => {/* Add new meal plan logic */}}
+        >
+          Generate New Plan
+        </Button>
+      </Box>
+
+      <Grid container spacing={3}>
+        {days.map((day) => (
+          <Grid item xs={12} md={6} lg={4} xl={3} key={day}>
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="h6" gutterBottom color="primary">
+                {day}
               </Typography>
-              <Typography variant="h6" color="text.secondary">
-                Plan your weekly meals and optimize your nutrition
-              </Typography>
-            </Box>
-            <Box display="flex" gap={2}>
-              <Button
-                variant="outlined"
-                startIcon={<CalendarIcon />}
-                onClick={() => setSelectedWeek(selectedWeek - 1)}
-              >
-                Previous Week
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<CalendarIcon />}
-                onClick={() => setSelectedWeek(selectedWeek + 1)}
-              >
-                Next Week
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-              >
-                Auto-Generate Plan
-              </Button>
-            </Box>
-          </Box>
-        </motion.div>
-
-        {/* Tabs */}
-        <motion.div variants={itemVariants}>
-          <Paper sx={{ mb: 3 }}>
-            <Tabs 
-              value={selectedTab} 
-              onChange={(_, newValue) => setSelectedTab(newValue)}
-              variant="fullWidth"
-            >
-              <Tab label="Weekly View" />
-              <Tab label="Calendar View" />
-              <Tab label="Shopping List" />
-            </Tabs>
-          </Paper>
-        </motion.div>
-
-        {/* Weekly Meal Plan Grid */}
-        {selectedTab === 0 && (
-          <motion.div variants={itemVariants}>
-            <Paper sx={{ p: 3 }}>
-              <Grid container spacing={2}>
-                {/* Header Row */}
-                <Grid item xs={12} md={1.5}>
-                  <Typography variant="h6" textAlign="center">
-                    Meal Type
-                  </Typography>
-                </Grid>
-                {daysOfWeek.map((day) => (
-                  <Grid item xs={12} md={1.5} key={day}>
-                    <Typography variant="h6" textAlign="center">
-                      {day}
-                    </Typography>
-                  </Grid>
-                ))}
-
-                {/* Meal Rows */}
+              
+              <Box display="flex" flexDirection="column" gap={2}>
                 {mealTypes.map((mealType) => (
-                  <React.Fragment key={mealType}>
-                    <Grid item xs={12} md={1.5}>
-                      <Box 
-                        display="flex" 
-                        alignItems="center" 
-                        justifyContent="center"
-                        height="100%"
-                        sx={{ 
-                          backgroundColor: 'primary.main',
-                          color: 'primary.contrastText',
-                          borderRadius: 1,
-                          py: 2
-                        }}
-                      >
-                        <Typography variant="subtitle1" fontWeight="bold">
-                          {mealType}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                    {daysOfWeek.map((day) => (
-                      <Grid item xs={12} md={1.5} key={`${day}-${mealType}`}>
-                        <Box sx={{ minHeight: 120 }}>
-                          <MealCard
-                            day={day}
-                            mealType={mealType}
-                            meal={mockMealPlan[day]?.[mealType]}
-                          />
-                        </Box>
-                      </Grid>
-                    ))}
-                  </React.Fragment>
+                  <Box key={mealType}>
+                    <Typography variant="subtitle2" color="text.secondary" mb={1}>
+                      {mealType}
+                    </Typography>
+                    {mealPlan[day]?.[mealType]?.name ? (
+                      <MealCard
+                        day={day}
+                        mealType={mealType}
+                        meal={mealPlan[day][mealType]}
+                        onEdit={handleEditMeal}
+                        onDelete={handleDeleteMeal}
+                      />
+                    ) : (
+                      <Card sx={{ minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Button
+                          startIcon={<AddIcon />}
+                          onClick={() => handleEditMeal(day, mealType, { name: '', calories: 0, prepTime: 0 })}
+                        >
+                          Add {mealType}
+                        </Button>
+                      </Card>
+                    )}
+                  </Box>
                 ))}
-              </Grid>
+              </Box>
             </Paper>
-          </motion.div>
-        )}
+          </Grid>
+        ))}
+      </Grid>
 
-        {/* Calendar View Placeholder */}
-        {selectedTab === 1 && (
-          <motion.div variants={itemVariants}>
-            <Paper sx={{ p: 4, textAlign: 'center', minHeight: 400 }}>
-              <CalendarIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h5" gutterBottom>
-                Calendar View
-              </Typography>
-              <Typography color="text.secondary">
-                Monthly calendar view coming soon...
-              </Typography>
-            </Paper>
-          </motion.div>
-        )}
-
-        {/* Shopping List Placeholder */}
-        {selectedTab === 2 && (
-          <motion.div variants={itemVariants}>
-            <Paper sx={{ p: 4, textAlign: 'center', minHeight: 400 }}>
-              <RestaurantIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h5" gutterBottom>
-                Auto-Generated Shopping List
-              </Typography>
-              <Typography color="text.secondary">
-                Shopping list generation based on meal plan coming soon...
-              </Typography>
-            </Paper>
-          </motion.div>
-        )}
-
-        {/* Weekly Nutrition Summary */}
-        <motion.div variants={itemVariants}>
-          <Paper sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h5" gutterBottom>
-              📊 Weekly Nutrition Summary
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Box textAlign="center">
-                  <Typography variant="h4" color="primary.main">
-                    2,850
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Avg Daily Calories
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Box textAlign="center">
-                  <Typography variant="h4" color="secondary.main">
-                    165g
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Avg Daily Protein
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Box textAlign="center">
-                  <Typography variant="h4" color="success.main">
-                    2.5h
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Prep Time
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Box textAlign="center">
-                  <Typography variant="h4" color="warning.main">
-                    $12.50
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Avg Cost per Day
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
-          </Paper>
-        </motion.div>
-      </motion.div>
-    </Container>
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {editingMeal?.meal.name ? 'Edit Meal' : 'Add New Meal'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Meal Name"
+            value={editingMeal?.meal.name || ''}
+            onChange={(e) => setEditingMeal(prev => prev ? {
+              ...prev,
+              meal: { ...prev.meal, name: e.target.value }
+            } : null)}
+            margin="normal"
+          />
+          <TextField
+            fullWidth
+            label="Calories"
+            type="number"
+            value={editingMeal?.meal.calories || ''}
+            onChange={(e) => setEditingMeal(prev => prev ? {
+              ...prev,
+              meal: { ...prev.meal, calories: parseInt(e.target.value) || 0 }
+            } : null)}
+            margin="normal"
+          />
+          <TextField
+            fullWidth
+            label="Prep Time (minutes)"
+            type="number"
+            value={editingMeal?.meal.prepTime || ''}
+            onChange={(e) => setEditingMeal(prev => prev ? {
+              ...prev,
+              meal: { ...prev.meal, prepTime: parseInt(e.target.value) || 0 }
+            } : null)}
+            margin="normal"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveMeal} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

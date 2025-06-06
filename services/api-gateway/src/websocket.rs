@@ -1,5 +1,4 @@
 use axum::extract::ws::{Message, WebSocket};
-use std::sync::Arc;
 use crate::AppState;
 
 pub struct WebSocketManager {

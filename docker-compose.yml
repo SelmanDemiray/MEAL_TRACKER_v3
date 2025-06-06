@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Database
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: mealprep-postgres
@@ -9,89 +9,79 @@ services:
       POSTGRES_DB: mealprep
       POSTGRES_USER: mealprep
       POSTGRES_PASSWORD: mealprep_secure_2024
-    ports:
-      - "35432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
-    networks:
-      - mealprep-network
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "35432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mealprep -d mealprep"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: mealprep-redis
-    ports:
-      - "36379:6379"
+    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-    networks:
-      - mealprep-network
-    command: redis-server --appendonly yes
+    ports:
+      - "36379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # API Gateway
+  # API Gateway Service
   api-gateway:
     build:
       context: ./services/api-gateway
       dockerfile: Dockerfile
     container_name: mealprep-api-gateway
-    ports:
-      - "38080:8080"
     environment:
       DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
       REDIS_URL: redis://redis:6379
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       JWT_EXPIRATION: 3600
+      CORS_ORIGINS: http://localhost:3000,http://localhost:39000
       NUTRITION_SERVICE_URL: http://nutrition-service:8081
       ANALYTICS_SERVICE_URL: http://analytics-service:8082
-      RUST_LOG: info
+      RECIPE_IMPORT_SERVICE_URL: http://recipe-import-service:8083
+      RUST_LOG: debug
+    ports:
+      - "38080:8080"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - mealprep-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Nutrition Service (AI-Powered)
+  # Nutrition Service
   nutrition-service:
     build:
       context: ./services/nutrition-service
       dockerfile: Dockerfile
     container_name: mealprep-nutrition-service
-    ports:
-      - "38081:8081"
     environment:
       DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
       REDIS_URL: redis://redis:6379
       AI_MODEL_PATH: /app/models
-      ENABLE_GPU: false
-      MAX_BATCH_SIZE: 32
-      RUST_LOG: info
+      RUST_LOG: debug
+    ports:
+      - "38081:8081"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - mealprep-network
-    volumes:
-      - ai_models:/app/models
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 30s
@@ -104,21 +94,39 @@ services:
       context: ./services/analytics-service
       dockerfile: Dockerfile
     container_name: mealprep-analytics-service
-    ports:
-      - "38082:8082"
     environment:
       DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
       REDIS_URL: redis://redis:6379
-      RUST_LOG: info
+      RUST_LOG: debug
+    ports:
+      - "38082:8082"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - mealprep-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Recipe Import Service
+  recipe-import-service:
+    build:
+      context: ./services/recipe-import-service
+      dockerfile: Dockerfile
+    container_name: mealprep-recipe-import-service
+    environment:
+      DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
+      RUST_LOG: debug
+    ports:
+      - "38083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -131,61 +139,35 @@ services:
     container_name: mealprep-frontend
     ports:
       - "39000:3000"
-    environment:
-      REACT_APP_API_URL: http://localhost:38080/api
-      REACT_APP_WS_URL: ws://localhost:38080/ws
     depends_on:
       - api-gateway
-    networks:
-      - mealprep-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Monitoring Stack
+  # Monitoring - Prometheus
   prometheus:
     image: prom/prometheus:latest
     container_name: mealprep-prometheus
-    ports:
-      - "39090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    networks:
-      - mealprep-network
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: mealprep-grafana
     ports:
-      - "39091:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      - "39090:9090"
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-    networks:
-      - mealprep-network
-    depends_on:
-      - prometheus
-
-networks:
-  mealprep-network:
-    driver: bridge
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
 
 volumes:
   postgres_data:
   redis_data:
   prometheus_data:
-  grafana_data:
-  ai_models:
+
+networks:
+  default:
+    name: mealprep-network
