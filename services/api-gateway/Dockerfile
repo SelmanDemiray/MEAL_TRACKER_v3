@@ -1,14 +1,23 @@
-FROM rust:1.82 as builder
+FROM rust:1.85 as builder
 
 WORKDIR /app
+
+# Copy the Cargo manifests
 COPY Cargo.toml ./
-RUN cargo fetch
 
-COPY src ./src
-COPY migrations ./migrations
+# Build dummy project to cache dependencies
+RUN mkdir -p src && \
+    echo "fn main() {println!(\"Dummy main\")}" > src/main.rs && \
+    cargo build && \
+    rm -rf src target
 
+# Copy the actual source code
+COPY . .
+
+# Build the actual project
 RUN cargo build --release
 
+# Runtime stage
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
@@ -17,7 +26,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/api-gateway /app/api-gateway
+# Copy the binary from the build stage
+COPY --from=builder /app/target/release/api-gateway .
 
 EXPOSE 8080
 

@@ -1,13 +1,11 @@
-[package]
-name = "nutrition-service"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = [
+    "services/api-gateway",
+    "services/nutrition-service", 
+    "services/analytics-service"
+]
 
-[[bin]]
-name = "nutrition-service"
-path = "src/main.rs"
-
-[dependencies]
+[workspace.dependencies]
 tokio = { version = "1.0", features = ["full"] }
 axum = "0.7"
 tower = "0.4"
@@ -21,6 +19,3 @@ anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 redis = { version = "0.23", features = ["tokio-comp"] }
-reqwest = { version = "0.11", features = ["json"] }
-polars = { version = "0.33", features = ["lazy", "temporal", "strings"] }
-fastrand = "2.0"

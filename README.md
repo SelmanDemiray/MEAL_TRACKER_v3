@@ -367,3 +367,109 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Made with ❤️ for healthier eating and better meal planning**
+
+# 🍲 Meal Tracker v3
+
+A comprehensive meal planning and nutrition tracking application built with Rust microservices and React.
+
+## 🏗️ Architecture
+
+This application uses a microservices architecture with the following components:
+
+- **API Gateway**: Entry point for all client requests, handles authentication and request routing
+- **Nutrition Service**: Manages nutrition data, recipe analysis, and meal planning
+- **Analytics Service**: Processes user data for insights and recommendations
+- **Frontend**: React-based user interface
+- **PostgreSQL**: Primary database for persistent storage
+- **Redis**: Cache and message broker
+- **Prometheus**: Monitoring and metrics collection
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Git
+
+### Setup and Run
+
+1. Clone the repository (if not already done):
+   ```
+   git clone https://github.com/yourusername/meal-tracker-v3.git
+   cd meal-tracker-v3
+   ```
+
+2. Start the application:
+   ```
+   docker-compose up -d
+   ```
+
+3. Access the application:
+   - Frontend: http://localhost:3000
+   - API Gateway: http://localhost:38080
+   - Prometheus: http://localhost:9090
+
+## 📂 Project Structure
+
+```
+meal-tracker-v3/
+├── services/
+│   ├── api-gateway/         # API Gateway service (Rust/Axum)
+│   ├── nutrition-service/    # Nutrition analysis service (Rust)
+│   └── analytics-service/    # Data analytics service (Rust)
+├── frontend/                # React frontend
+├── database/                # Database migrations and schemas
+├── monitoring/              # Prometheus configuration
+├── docker-compose.yml       # Docker Compose configuration
+└── .env                     # Environment variables
+```
+
+## 🔧 Development
+
+### Running in Development Mode
+
+For development with hot-reloading:
+
+```
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+### Running Tests
+
+```
+# Run all tests
+docker-compose exec api-gateway cargo test
+docker-compose exec nutrition-service cargo test
+docker-compose exec analytics-service cargo test
+
+# Frontend tests
+docker-compose exec frontend npm test
+```
+
+## 📦 Technologies
+
+- **Backend**:
+  - Rust
+  - Axum web framework
+  - SQLx for database access
+  - Redis for caching
+  - Tokio for async runtime
+
+- **Frontend**:
+  - React with TypeScript
+  - Material-UI components
+  - Redux Toolkit for state management
+  - React Query for data fetching
+
+- **DevOps**:
+  - Docker & Docker Compose
+  - Prometheus for monitoring
+  - GitHub Actions for CI/CD
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

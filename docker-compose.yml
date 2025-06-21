@@ -1,186 +1,154 @@
-version: '3.8'
 
 services:
   # Database
   postgres:
     image: postgres:15-alpine
-    container_name: mealprep-postgres
+    container_name: mealtracker_postgres
     environment:
-      POSTGRES_DB: mealprep
-      POSTGRES_USER: mealprep
-      POSTGRES_PASSWORD: mealprep_secure_2024
-    ports:
-      - "35432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-mealtracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mealtracker_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mealtracker}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
-    networks:
-      - mealprep-network
+    ports:
+      - "0.0.0.0:35432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mealprep -d mealprep"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U mealtracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mealtracker_network
+    restart: unless-stopped
 
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: mealprep-redis
+    container_name: mealtracker_redis
     ports:
-      - "36379:6379"
+      - "0.0.0.0:36379:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - mealprep-network
-    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mealtracker_network
+    restart: unless-stopped
 
   # API Gateway
   api-gateway:
     build:
       context: ./services/api-gateway
       dockerfile: Dockerfile
-    container_name: mealprep-api-gateway
-    ports:
-      - "38080:8080"
+    container_name: mealtracker_api_gateway
     environment:
-      DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
-      JWT_EXPIRATION: 3600
-      NUTRITION_SERVICE_URL: http://nutrition-service:8081
-      ANALYTICS_SERVICE_URL: http://analytics-service:8082
-      RUST_LOG: info
+      - DATABASE_URL=postgres://${POSTGRES_USER:-mealtracker}:${POSTGRES_PASSWORD:-mealtracker_password}@postgres:5432/${POSTGRES_DB:-mealtracker}
+      - REDIS_URL=redis://redis:6379
+      - NUTRITION_SERVICE_URL=http://nutrition-service:8081
+      - ANALYTICS_SERVICE_URL=http://analytics-service:8082
+      - JWT_SECRET=${JWT_SECRET:-super_secret_key_for_development}
+    ports:
+      - "0.0.0.0:38080:8080"
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
+      - nutrition-service
+      - analytics-service
     networks:
-      - mealprep-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - mealtracker_network
+    restart: unless-stopped
 
   # Nutrition Service (AI-Powered)
   nutrition-service:
     build:
       context: ./services/nutrition-service
       dockerfile: Dockerfile
-    container_name: mealprep-nutrition-service
-    ports:
-      - "38081:8081"
+    container_name: mealtracker_nutrition_service
     environment:
-      DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
-      REDIS_URL: redis://redis:6379
-      AI_MODEL_PATH: /app/models
-      ENABLE_GPU: false
-      MAX_BATCH_SIZE: 32
-      RUST_LOG: info
+      - DATABASE_URL=postgres://${POSTGRES_USER:-mealtracker}:${POSTGRES_PASSWORD:-mealtracker_password}@postgres:5432/${POSTGRES_DB:-mealtracker}
+      - REDIS_URL=redis://redis:6379
+      - API_KEYS=${NUTRITION_API_KEYS:-}
+    ports:
+      - "0.0.0.0:38081:8081"
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
     networks:
-      - mealprep-network
-    volumes:
-      - ai_models:/app/models
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - mealtracker_network
+    restart: unless-stopped
 
   # Analytics Service
   analytics-service:
     build:
       context: ./services/analytics-service
       dockerfile: Dockerfile
-    container_name: mealprep-analytics-service
-    ports:
-      - "38082:8082"
+    container_name: mealtracker_analytics_service
     environment:
-      DATABASE_URL: postgresql://mealprep:mealprep_secure_2024@postgres:5432/mealprep
-      REDIS_URL: redis://redis:6379
-      RUST_LOG: info
+      - DATABASE_URL=postgres://${POSTGRES_USER:-mealtracker}:${POSTGRES_PASSWORD:-mealtracker_password}@postgres:5432/${POSTGRES_DB:-mealtracker}
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "0.0.0.0:38082:8082"
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
     networks:
-      - mealprep-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - mealtracker_network
+    restart: unless-stopped
 
   # Frontend (React)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: mealprep-frontend
+    container_name: mealtracker_frontend
     ports:
-      - "39000:3000"
-    environment:
-      REACT_APP_API_URL: http://localhost:38080/api
-      REACT_APP_WS_URL: ws://localhost:38080/ws
+      - "0.0.0.0:3000:3000"
     depends_on:
       - api-gateway
     networks:
-      - mealprep-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - mealtracker_network
+    restart: unless-stopped
 
   # Monitoring Stack
   prometheus:
     image: prom/prometheus:latest
-    container_name: mealprep-prometheus
-    ports:
-      - "39090:9090"
+    container_name: mealtracker_prometheus
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
-    networks:
-      - mealprep-network
+    ports:
+      - "0.0.0.0:9090:9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - mealtracker_network
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
-    container_name: mealprep-grafana
-    ports:
-      - "39091:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
+    container_name: mealtracker_grafana
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-    networks:
-      - mealprep-network
+    ports:
+      - "0.0.0.0:3001:3000"
     depends_on:
       - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - mealtracker_network
+    restart: unless-stopped
 
 networks:
-  mealprep-network:
+  mealtracker_network:
     driver: bridge
 
 volumes:
@@ -188,4 +156,3 @@ volumes:
   redis_data:
   prometheus_data:
   grafana_data:
-  ai_models:

@@ -1,62 +1,62 @@
-# 🚪 API Gateway Service
+# API Gateway Service
 
-The central orchestration layer for the Meal Prep Pro platform, handling authentication, request routing, and real-time communications.
+The API Gateway service acts as the entry point for all client requests to the Meal Tracker backend.
 
-## 🎯 Purpose
+## Features
 
-The API Gateway serves as the single entry point for all client requests, providing:
-- **Authentication & Authorization**: JWT-based user authentication
-- **Request Routing**: Intelligent routing to appropriate microservices
-- **Rate Limiting**: Protection against abuse and DDoS attacks
-- **WebSocket Management**: Real-time updates and notifications
-- **Metrics Collection**: Performance and usage analytics
-- **CORS Handling**: Cross-origin request management
+- Authentication and Authorization
+- Request routing to microservices
+- API documentation
+- Rate limiting
+- Request/Response logging
+- CORS handling
+- Error standardization
 
-## 🏗️ Architecture
+## API Routes
 
+- `/api/auth/*` - Authentication endpoints
+- `/api/users/*` - User management endpoints
+- `/api/recipes/*` - Recipe endpoints (forwarded to Nutrition Service)
+- `/api/meal-plans/*` - Meal planning endpoints (forwarded to Nutrition Service)
+- `/api/nutrition/*` - Nutrition data endpoints (forwarded to Nutrition Service)
+- `/api/analytics/*` - Analytics and reporting endpoints (forwarded to Analytics Service)
+
+## Development
+
+### Prerequisites
+- Rust 1.70+
+- PostgreSQL 15
+- Redis 7.0+
+
+### Setup
+```bash
+# Build the service
+cargo build
+
+# Run the service
+cargo run
+
+# Run tests
+cargo test
 ```
-┌─────────────┐    ┌─────────────────┐    ┌──────────────────┐
-│   Client    │───►│   API Gateway   │───►│  Microservices   │
-│  (Frontend) │    │                 │    │                  │
-└─────────────┘    │  ┌─────────────┐│    │ ┌──────────────┐ │
-                   │  │   Auth      ││    │ │ Nutrition    │ │
-                   │  │ Middleware  ││    │ │ Service      │ │
-                   │  └─────────────┘│    │ └──────────────┘ │
-                   │  ┌─────────────┐│    │ ┌──────────────┐ │
-                   │  │  WebSocket  ││    │ │ Analytics    │ │
-                   │  │  Manager    ││    │ │ Service      │ │
-                   │  └─────────────┘│    │ └──────────────┘ │
-                   └─────────────────┘    └──────────────────┘
-```
 
-## 🚀 Features
+### Environment Variables
 
-### Core Functionality
-- **RESTful API**: Complete REST API for all platform features
-- **WebSocket Support**: Real-time bidirectional communication
-- **Authentication**: Secure JWT-based user sessions
-- **Authorization**: Role-based access control (RBAC)
-- **Request Validation**: Input sanitization and validation
-- **Error Handling**: Comprehensive error responses
+| Variable | Description | Default |
+|----------|-------------|---------|
+| DATABASE_URL | PostgreSQL connection URL | postgres://mealprep:password@localhost:5432/mealprep |
+| REDIS_URL | Redis connection URL | redis://localhost:6379 |
+| PORT | Service port | 8080 |
+| NUTRITION_SERVICE_URL | URL of the Nutrition Service | http://nutrition-service:8081 |
+| ANALYTICS_SERVICE_URL | URL of the Analytics Service | http://analytics-service:8082 |
+| JWT_SECRET | Secret for signing JWT tokens | (required) |
+| JWT_EXPIRATION_HOURS | JWT token expiration in hours | 24 |
 
-### Advanced Features
-- **Circuit Breaker**: Fault tolerance for downstream services
-- **Rate Limiting**: Configurable rate limiting per user/IP
-- **Caching**: Intelligent response caching with Redis
-- **Compression**: Gzip compression for responses
-- **Metrics**: Detailed performance metrics
-- **Health Checks**: Service health monitoring
+### API Documentation
 
-## 📁 Project Structure
-
-```
-api-gateway/
-├── src/
-│   ├── main.rs                 # Application entry point
-│   ├── handlers/               # Request handlers
-│   │   └── mod.rs             # All API endpoints
-│   ├── middleware_layer.rs     # Custom middleware
-│   ├── websocket.rs           # WebSocket management
+When the service is running, API documentation is available at:
+- Swagger UI: http://localhost:8080/swagger-ui/
+- OpenAPI JSON: http://localhost:8080/api-docs/openapi.json
 │   ├── services.rs            # Service orchestration
 │   ├── models/                # Data models
 │   │   └── mod.rs             # Shared data structures

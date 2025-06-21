@@ -6,8 +6,11 @@ use axum::{
     Router,
 };
 use serde::Serialize;
+use std::net::SocketAddr;
 use std::sync::Arc;
-use chrono::{DateTime, Utc};
+use tower_http::cors::CorsLayer;
+use tracing::{info, Level};
+use tracing_subscriber;
 
 mod analytics_engine;
 mod trend_analyzer;
@@ -30,7 +33,12 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_max_level(Level::INFO)
+        .init();
+
+    info!("Starting Analytics service...");
 
     let database_url = std::env::var("DATABASE_URL")?;
     let redis_url = std::env::var("REDIS_URL")?;
@@ -50,19 +58,39 @@ async fn main() -> anyhow::Result<()> {
         predictive_model,
     };
 
+    // Build our application with routes
     let app = Router::new()
+        .route("/health", get(health_check))
         .route("/analytics/dashboard", get(get_dashboard))
         .route("/analytics/trends", get(get_trends))
         .route("/analytics/predictions", get(get_predictions))
         .route("/analytics/insights", get(get_insights))
         .route("/analytics/reports", post(generate_report))
+        .layer(CorsLayer::permissive())
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8082").await?;
-    tracing::info!("📊 Analytics Service running on port 8082");
-    
+    // Run it with hyper on localhost:8082
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8082));
+    info!("Analytics service listening on {}", addr);
+
+    let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+    service: String,
+    version: String,
+}
+
+async fn health_check() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "healthy".to_string(),
+        service: "analytics-service".to_string(),
+        version: "0.1.0".to_string(),
+    })
 }
 
 #[derive(Serialize)]
@@ -89,7 +117,7 @@ struct TrendData {
 
 #[derive(Serialize)]
 struct DataPoint {
-    timestamp: DateTime<Utc>,
+    timestamp: chrono::DateTime<chrono::Utc>,
     value: f32,
 }
 

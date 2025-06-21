@@ -1,14 +1,16 @@
 use axum::{
-    extract::{Query, State},
-    http::StatusCode,
     response::Json,
     routing::{get, post},
     Router,
 };
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use std::sync::Arc;
+use tower_http::cors::CorsLayer;
+use tracing::{info};
+use tracing_subscriber;
 use uuid::Uuid;
-use chrono::{DateTime, Utc, Timelike};
+use chrono::{DateTime, Utc};
 
 mod ai_engine;
 mod nutrition_analyzer;
@@ -153,9 +155,20 @@ pub struct HealthInsights {
     pub recommendations: Vec<String>,
 }
 
+async fn health_check() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "healthy".to_string(),
+        service: "nutrition-service".to_string(),
+        version: "0.1.0".to_string(),
+    })
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Initialize tracing
     tracing_subscriber::fmt::init();
+
+    info!("Starting Nutrition service...");
 
     let database_url = std::env::var("DATABASE_URL")?;
     let redis_url = std::env::var("REDIS_URL")?;
@@ -176,19 +189,25 @@ async fn main() -> anyhow::Result<()> {
         recommendation_engine,
     };
 
+    // Build our application with routes
     let app = Router::new()
+        .route("/health", get(health_check))
         .route("/analyze/meal", post(analyze_meal))
         .route("/analyze/daily", post(analyze_daily_nutrition))
         .route("/analyze/trends", get(analyze_nutrition_trends))
         .route("/recommendations/meals", post(recommend_meals))
         .route("/recommendations/supplements", post(recommend_supplements))
         .route("/insights/health", get(generate_health_insights))
+        .layer(CorsLayer::permissive())
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8081").await?;
-    tracing::info!("🔬 Nutrition Service running on port 8081");
-    
-    axum::serve(listener, app).await?;
+    // Run it with hyper on localhost:8081
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8081));
+    info!("Nutrition service listening on {}", addr);
+
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+
     Ok(())
 }
 
@@ -378,4 +397,11 @@ pub struct NutritionTrends {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeasonalAnalysis {
     pub analysis: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+    service: String,
+    version: String,
 }

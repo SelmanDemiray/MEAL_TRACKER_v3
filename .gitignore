@@ -106,9 +106,15 @@ Thumbs.db
 # Rust specific
 Cargo.lock
 target/
+*.pdb
+**/*.rs.bk
+**/*.swp
+!workspace/Cargo.lock
 
 # Docker
 docker-compose.override.yml
+.docker/
+.dockerignore
 
 # Backup files
 *.bak
@@ -144,3 +150,7 @@ site/
 
 # Monitoring data
 monitoring/data/
+
+# Frontend build
+frontend/build/
+frontend/dist/

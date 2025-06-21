@@ -112,3 +112,45 @@ Write-Host "✅ Cleanup completed!" -ForegroundColor Green
 Write-Host ""
 Write-Host "To rebuild and start fresh:" -ForegroundColor Cyan
 Write-Host "docker-compose up --build -d" -ForegroundColor White
+
+# Docker cleanup script for Meal Tracker v3
+
+Write-Host "Starting Docker cleanup..." -ForegroundColor Cyan
+
+# Stop and remove containers
+Write-Host "Stopping and removing containers..." -ForegroundColor Yellow
+docker-compose down
+
+# Remove dangling images
+Write-Host "Removing dangling images..." -ForegroundColor Yellow
+docker image prune -f
+
+# Remove unused volumes
+Write-Host "Cleaning unused volumes..." -ForegroundColor Yellow
+docker volume prune -f
+
+# Show Docker disk usage
+Write-Host "Docker disk usage:" -ForegroundColor Green
+docker system df
+
+Write-Host "=== Cleanup complete ===" -ForegroundColor Cyan
+
+# PowerShell script for Docker cleanup on Windows systems
+
+Write-Host "Stopping all containers..." -ForegroundColor Cyan
+docker-compose down
+
+Write-Host "Removing containers..." -ForegroundColor Cyan
+docker-compose rm -f
+
+Write-Host "Cleaning up volumes..." -ForegroundColor Cyan
+docker volume prune -f
+
+Write-Host "Cleaning up networks..." -ForegroundColor Cyan
+docker network prune -f
+
+Write-Host "Removing dangling images..." -ForegroundColor Cyan
+docker image prune -f
+
+Write-Host "Cleanup complete!" -ForegroundColor Green
+Write-Host "To restart the application, run: docker-compose up -d --build" -ForegroundColor Yellow

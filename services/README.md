@@ -1,48 +1,48 @@
-# 🔧 Microservices Architecture
+# Microservices Architecture
 
-This directory contains all the backend microservices for the Meal Prep Pro platform. Each service is built with Rust and Axum for high performance and reliability.
+This directory contains the backend microservices for the Meal Tracker application.
 
-## 🏗️ Services Overview
+## Services Overview
 
-### 🚪 API Gateway (`api-gateway/`)
-**Port**: 8080 | **Role**: Central entry point
+### API Gateway
+- Entry point for all client requests
+- Handles authentication and authorization
+- Routes requests to appropriate services
+- Implements API rate limiting and monitoring
+- Port: 8080
 
-The main orchestration layer that handles:
-- Request routing to appropriate services
-- Authentication and authorization
-- Rate limiting and security
-- WebSocket connections for real-time features
-- Metrics collection and health monitoring
+### Nutrition Service
+- Manages food and recipe nutrition data
+- Analyzes recipes for nutritional content
+- Provides nutrition recommendations
+- Handles meal planning optimization
+- Port: 8081
 
-**Key Features**:
-- JWT-based authentication
-- CORS handling
-- Request/response transformation
-- Service discovery and load balancing
-- Circuit breaker patterns
+### Analytics Service
+- Processes user behavior data
+- Generates insights from meal tracking
+- Provides personalized recommendations
+- Handles reporting and visualization data
+- Port: 8082
 
-### 🧠 Nutrition Service (`nutrition-service/`)
-**Port**: 8081 | **Role**: AI-powered nutrition intelligence
+## Development Guidelines
 
-Advanced nutrition analysis and recommendation engine:
-- Real-time nutritional analysis of meals and ingredients
-- AI-powered meal recommendations based on user goals
-- Micronutrient tracking and bioavailability calculations
-- Supplement recommendations
-- Deficiency prediction and health insights
+Each service follows these principles:
 
-**AI Capabilities**:
-- Machine learning meal optimization
-- Personalized nutrition goal calculations
-- Predictive health analytics
-- Smart food pairing suggestions
+1. **Self-Contained**: Each service can operate independently
+2. **API-First**: Clear API contracts and documentation
+3. **Health Checks**: Endpoint for monitoring service health
+4. **Metrics**: Prometheus metrics for observability
+5. **Logging**: Structured logging with tracing information
 
-### 📊 Analytics Service (`analytics-service/`)
-**Port**: 8082 | **Role**: Data insights and business intelligence
+## Communication Patterns
 
-Comprehensive analytics and reporting:
-- User behavior analysis
-- Nutrition trend tracking
+- **Synchronous**: RESTful APIs with JSON
+- **Asynchronous**: When appropriate, using message passing via Redis
+
+## Deployment
+
+All services are containerized using Docker and can be deployed together using docker-compose or individually.
 - Predictive modeling for health outcomes
 - Business intelligence dashboards
 - Performance metrics and KPIs

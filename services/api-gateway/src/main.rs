@@ -9,11 +9,10 @@ use axum::{
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
-    compression::CompressionLayer,
 };
 use std::sync::Arc;
 use prometheus::{Encoder, TextEncoder};
-use std::net::SocketAddr;
+use tracing::{info, warn};
 
 mod auth;
 mod handlers;
@@ -155,7 +154,6 @@ fn create_router(state: AppState) -> Router {
                 .allow_headers(Any),
         )
         .layer(TraceLayer::new_for_http())
-        .layer(CompressionLayer::new())
 }
 
 async fn websocket_handler(
@@ -191,3 +189,5 @@ async fn metrics() -> String {
     encoder.encode(&metric_families, &mut buffer).unwrap();
     String::from_utf8(buffer).unwrap()
 }
+
+

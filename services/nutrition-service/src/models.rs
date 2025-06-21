@@ -224,10 +224,11 @@ pub struct TrendPrediction {
     pub confidence_interval: (f32, f32),
 }
 
-// Re-export types from main.rs with proper derives
-pub use crate::{
-    BasicNutrition, Micronutrient, DietaryCompliance, OptimizationSuggestion,
-    EnvironmentalImpact, MealIngredient, LoggedMeal, MealNutritionBreakdown,
-    GoalAdherence, MealSuggestion, SleepNutritionImpact,
-    MealRecommendationRequest, MealRecommendation
-};
+// Re-export only the types that are actually used
+// These re-exports are commented out to avoid unused import warnings
+// pub use crate::{
+//     BasicNutrition, Micronutrient, DietaryCompliance, OptimizationSuggestion,
+//     EnvironmentalImpact, MealIngredient, LoggedMeal, MealNutritionBreakdown,
+//     GoalAdherence, MealSuggestion, SleepNutritionImpact,
+//     MealRecommendationRequest, MealRecommendation
+// };
