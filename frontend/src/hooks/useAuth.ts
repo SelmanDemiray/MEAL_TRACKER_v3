@@ -2,13 +2,18 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
 import { logout as logoutAction, loginStart, loginSuccess } from '../store/slices/authSlice';
 
-// Define an interface for the return type of the useAuth hook
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
+
 interface UseAuthReturn {
   user: RootState['auth']['user'];
   token: RootState['auth']['token'];
   isAuthenticated: boolean;
   loading: boolean;
-  login: (token: string) => void;
+  login: (token: string, user?: User) => void;
   logout: () => void;
 }
 
@@ -20,17 +25,13 @@ export const useAuth = (): UseAuthReturn => {
     dispatch(logoutAction());
   };
   
-  const login = (token: string) => {
+  const login = (token: string, user?: User) => {
     dispatch(loginStart());
-    
-    // Since this is a mock login, create a simple user object
-    const mockUser = {
+    const mockUser = user || {
       id: '1',
       username: 'user',
       email: 'user@example.com',
     };
-    
-    // Dispatch login success with the mock user and token
     dispatch(loginSuccess({ user: mockUser, token }));
   };
 

@@ -473,3 +473,16 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+# Meal Tracker Pro
+
+## Authentication
+
+- **Register:** Create a new account via the Register page.
+- **Login:** Use your email and password.
+- **Demo:** Click "Try Free Demo" on the login page to explore the app without registration.
+
+## API Endpoints
+
+- `POST /api/auth/register` — Register a new user
+- `POST /api/auth/login` — Login (use `demo@mealprep.com` / `demopass` for demo)

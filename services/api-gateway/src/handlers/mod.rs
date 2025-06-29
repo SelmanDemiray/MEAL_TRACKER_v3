@@ -4,20 +4,157 @@ use crate::AppState;
 
 pub mod auth_handlers {
     use super::*;
-    use crate::models::*;
+    use crate::models::{CreateUserRequest, LoginRequest};
+    use axum::extract::Json;
+    use axum::http::StatusCode;
+    use crate::AppState;
+    use serde_json::json;
+    use sqlx::Row;
+    use bcrypt::{hash, verify, DEFAULT_COST};
+    use jsonwebtoken::{encode, Header, EncodingKey};
+    use chrono::{Utc, Duration};
+    use uuid::Uuid;
+
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct Claims {
+        sub: String,
+        email: String,
+        exp: usize,
+    }
+
+    fn jwt_secret() -> String {
+        std::env::var("JWT_SECRET").unwrap_or_else(|_| "super_secret_key_for_development".to_string())
+    }
 
     pub async fn register(
-        State(_state): State<AppState>,
-        Json(_payload): Json<CreateUserRequest>,
+        State(state): State<AppState>,
+        Json(payload): Json<CreateUserRequest>,
     ) -> Result<Json<Value>, StatusCode> {
-        Ok(Json(serde_json::json!({"message": "Register endpoint"})))
+        // Check if user exists
+        let exists: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM users WHERE email = $1")
+            .bind(&payload.email)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if exists.is_some() {
+            return Err(StatusCode::CONFLICT);
+        }
+
+        let hashed = hash(&payload.password, DEFAULT_COST)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let user_id = Uuid::new_v4();
+        let now = Utc::now();
+
+        sqlx::query("INSERT INTO users (id, username, email, password_hash, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)")
+            .bind(user_id)
+            .bind(&payload.username)
+            .bind(&payload.email)
+            .bind(&hashed)
+            .bind(now)
+            .execute(&state.db)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        // Fetch user
+        let user: (Uuid, String, String) = sqlx::query_as("SELECT id, username, email FROM users WHERE id = $1")
+            .bind(user_id)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        // JWT
+        let exp = (Utc::now() + Duration::hours(24)).timestamp() as usize;
+        let claims = Claims {
+            sub: user.0.to_string(),
+            email: user.2.clone(),
+            exp,
+        };
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(jwt_secret().as_bytes()),
+        ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        Ok(Json(json!({
+            "token": token,
+            "user": {
+                "id": user.0,
+                "username": user.1,
+                "email": user.2,
+            }
+        })))
     }
 
     pub async fn login(
-        State(_state): State<AppState>,
-        Json(_payload): Json<LoginRequest>,
+        State(state): State<AppState>,
+        Json(payload): Json<LoginRequest>,
     ) -> Result<Json<Value>, StatusCode> {
-        Ok(Json(serde_json::json!({"message": "Login endpoint"})))
+        // Demo login
+        if payload.email == "demo@mealprep.com" && payload.password == "demopass" {
+            let exp = (Utc::now() + Duration::hours(24)).timestamp() as usize;
+            let claims = Claims {
+                sub: "demo".to_string(),
+                email: "demo@mealprep.com".to_string(),
+                exp,
+            };
+            let token = encode(
+                &Header::default(),
+                &claims,
+                &EncodingKey::from_secret(jwt_secret().as_bytes()),
+            ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            return Ok(Json(json!({
+                "token": token,
+                "user": {
+                    "id": "demo",
+                    "username": "Demo User",
+                    "email": "demo@mealprep.com"
+                }
+            })));
+        }
+
+        // Real login
+        let row = sqlx::query("SELECT id, username, email, password_hash FROM users WHERE email = $1")
+            .bind(&payload.email)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let row = match row {
+            Some(r) => r,
+            None => return Err(StatusCode::UNAUTHORIZED),
+        };
+
+        let id: Uuid = row.get("id");
+        let username: String = row.get("username");
+        let email: String = row.get("email");
+        let password_hash: String = row.get("password_hash");
+
+        if !verify(&payload.password, &password_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+
+        let exp = (Utc::now() + Duration::hours(24)).timestamp() as usize;
+        let claims = Claims {
+            sub: id.to_string(),
+            email: email.clone(),
+            exp,
+        };
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(jwt_secret().as_bytes()),
+        ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        Ok(Json(json!({
+            "token": token,
+            "user": {
+                "id": id,
+                "username": username,
+                "email": email,
+            }
+        })))
     }
 
     pub async fn refresh_token(

@@ -14,7 +14,7 @@ interface UseApiOptions {
   onError?: (error: string) => void;
 }
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:38080/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 // Create axios instance with interceptors
 const apiClient = axios.create({

@@ -12,7 +12,6 @@ use tower_http::{
 };
 use std::sync::Arc;
 use prometheus::{Encoder, TextEncoder};
-use tracing::{info, warn};
 
 mod auth;
 mod handlers;
